@@ -24,7 +24,7 @@ class Config():
 class Data():
   def __init__(self):
     self.headers = ["reference_genome", "nt_sequence", "nt_length"]
-    self.rows = [[], [], []]
+    self.columns = [[], [], []]
 
 
 # Take human-editable config json files and compile into a single minified file for the aligner
@@ -51,9 +51,9 @@ def create_editable_config():
   data = Data()
 
   for record in SeqIO.parse(seq_path, "fasta"):
-    data.rows[0].append(reference_genome)
-    data.rows[1].append(record.id,)
-    data.rows[2].append(len(record))
+    data.columns[0].append(reference_genome)
+    data.columns[1].append(record.id,)
+    data.columns[2].append(str(len(record)))
 
   with open(reference_output_path, "w") as f:
     json.dump(data.__dict__, f, indent=2)
