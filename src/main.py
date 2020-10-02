@@ -15,10 +15,10 @@ USAGE_STRING = """usage:
 class Config():
   def __init__(self):
     self.score_threshold = 60
-    self.percent_threshold = 0.05
+    self.score_filter = 25
     self.num_mismatches = 0
     self.discard_multiple_matches = False
-    self.group_on = []
+    self.group_on = ""
 
 
 class Data():
@@ -66,7 +66,9 @@ def create_editable_config():
 if __name__ == "__main__":
   print_usage_and_exit = False
 
-  if sys.argv[1] == "compile":
+  if len(sys.argv) == 1:
+      print_usage_and_exit = True
+  elif sys.argv[1] == "compile":
     if len(sys.argv) != 5:
       print_usage_and_exit = True
     else:
