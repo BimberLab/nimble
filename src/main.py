@@ -18,6 +18,7 @@ class Config():
     self.score_filter = 25
     self.num_mismatches = 0
     self.discard_multiple_matches = False
+    self.force_intersects = False
     self.group_on = ""
 
 
