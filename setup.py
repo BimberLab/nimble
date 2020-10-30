@@ -4,7 +4,7 @@ with open("README.md", "r") as f:
     long_description = f.read()
 
 setuptools.setup(
-    name="immunogenotyper-devsebb",
+    name="immunogenotyper",
     version="0.1.0",
     author="Sebastian Benjamin",
     author_email="benjamse@ohsu.edu",
