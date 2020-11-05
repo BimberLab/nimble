@@ -28,3 +28,51 @@ The `download` command downloads the most recent aligner [release](https://githu
 `python -m immunogenotyper download <version>` where `<version>` is a release tag like "v0.0.1" or "v0.0.1-beta.1". Note that this command downloads a file called `aligner` to the directory you're running the command in -- be careful not to overwrite an existing file.
 
 To get help information, run `python -m immunogenotyper` or `python -m immunogenotyper help`.
+
+
+
+# JSON Format
+The `generate` command creates two .json files. One file contains the reference metadata, and the other contains the configuration for the aligner.
+
+
+## Reference Metadata
+The reference metadata file follows this format:
+```
+{
+  "headers": ["reference_genome", "nt_sequence", "nt_length", ...]
+  "columns": [[...], [...], [...]]
+}
+```
+
+This file contains a `headers` field and a `columns` field. `headers` is an array of strings that corrospond to the matching column in the `columns` field. The aligner must have at least a `reference_genome` header, an `nt_sequence` header, and an `nt_length` header.
+
+The `columns` field is a multidimentional array of strings. Each sub-array corrosponds to a header in the `headers` field.
+
+To add another header/column pair (e.g. to add per-allele lineage or locus information), add a string to the `headers` array and add a column to the corrosponding index in the `columns` field.
+
+
+## Aligner Configuration
+The aligner configuration file follows this format:
+
+```
+{
+  "score_threshold": number,
+  "score_filter": number,
+  "num_mismatches": number,
+  "discard_multiple_matches": boolean,
+  "intersect_level: number",
+  "group_on": string
+}
+```
+
+* `score_threshold`: controls the score an alignment needs to reach to be considered a match. For perfect matches, set this value equal to the length of the reads being aligned to the reference library.
+
+* `score_filter`: sets a lower boundary on the number of matches needed on a reference before it is reported. For instance, if you set `"score_filter": 25`, no reference with less than 25 matches will be reported in the output.
+
+* `num_mismatches`: sets the allowable number of mismatches during alignment.
+
+* `discard_multiple_matches`: flag for whether a read that matches multiple references should be counted. If `true`, a read that matches multiple references will count toward the scores of all of those references. If `false`, the read's matches are discarded.
+
+* `intersect_level`: controls logic behind how to count matches during alignment. There are three intersect levels. `intersect_level: 0` takes the best matches from either the read or reverse read, determined by alignment score. `intersect_level: 1` takes the intersection between the read and reverse read -- if there is no intersection, it defaults to the best match. `intersect_level: 2` takes the intersection and reports no match if there is no intersection.
+
+* `group_on`: if this is set to the name of a header in the reference metadata file, the output `results.tsv` will be filtered to that level of specificity. For instance, if you've added a column with lineage information under a header called "lineage", sestting `"group_on": "lineage"` will report lineage-level information, rather than the default case of allele-level information. If a single read matches onto the `group_on` category more than once during alignment (for instance, if a read matches multiple alleles in the same lineage and you're grouping on lineage), it will only count as one match. If `group_on` is unset, allele-level information is returned.
