@@ -9,6 +9,8 @@ import argparse
 from pathlib import Path
 from Bio import SeqIO
 
+from filtering import filter
+
 USAGE_STRING = """usage:
   immunogenotyper download <OPTIONAL:aligner_version>
 
@@ -16,7 +18,9 @@ USAGE_STRING = """usage:
 
   immunogenotyper compile <reference_json_path> <aligner_config_json_path> <compiled_json_path>
 
-  immunogenotyper align <reference.json> <reference.fasta> <input>... --debug-reference <DEBUG_REFERENCE>
+  immunogenotyper align <reference.json> <reference.fasta> <input>...
+
+  immunogenotyper filter <reference.json> <results.tsv> <output.tsv>
 
   immunogenotyper help
   """
@@ -38,11 +42,7 @@ class Data():
 
 
 # Take human-editable config json files and compile into a single minified file for the aligner
-def compile_config():
-  reference_output_path = sys.argv[2]
-  config_output_path = sys.argv[3]
-  compiled_json_path = sys.argv[4]
-
+def compile_config(reference_output_path, config_output_path, compiled_json_path):
   with open(reference_output_path, "r") as ref, open(config_output_path, "r") as conf, open(compiled_json_path, "w") as comp:
     reference = json.load(ref)
     config = json.load(conf)
@@ -50,21 +50,19 @@ def compile_config():
 
 
 # Generate and write human-editable config json files to disk
-def create_editable_config():
-  seq_path = sys.argv[2]
-  reference_output_path = sys.argv[3]
-  config_output_path = sys.argv[4]
-
+def create_editable_config(seq_path, reference_output_path, config_output_path):
   # Generate reference genome name by getting the filename and prettifying it
   reference_genome = Path(seq_path).stem.replace("_", " ")
 
   data = Data()
 
+  # Fill data structure containing the reference library
   for record in SeqIO.parse(seq_path, "fasta"):
     data.columns[0].append(reference_genome)
     data.columns[1].append(record.id,)
     data.columns[2].append(str(len(record)))
 
+  # Write reference and default config to disk
   with open(reference_output_path, "w") as f:
     json.dump(data.__dict__, f, indent=2)
 
@@ -89,19 +87,21 @@ def get_exec_name_from_platform():
   return exec_name
 
 
-# Given a the name of a release, download the platform-specific executable from that release.
+# Given the name of a release, download the platform-specific executable from that release.
 # Given no name, default to the most recent release.
-def download_aligner():
+def download_aligner(release):
   exec_name = get_exec_name_from_platform()
 
   url = ""
-  if len(sys.argv) == 3:
-    url = "https://github.com/devsebb/ImmunoGenotyper/releases/download/" + sys.argv[2] + "/" + exec_name
+  if len(release) == 1:
+    url = "https://github.com/devsebb/ImmunoGenotyper/releases/download/" + release[0] + "/" + exec_name
   else:
     url = "https://github.com/devsebb/ImmunoGenotyper/releases/latest/download/" + exec_name
 
+  # Download aligner
   r = requests.get(url)
 
+  # If we successfully downloaded it, write the file to disk and give it execution permissions if necessary
   if r.status_code == 200:
     with open('aligner', 'wb') as f:
       f.write(r.content)
@@ -114,36 +114,30 @@ def download_aligner():
 
 
 # Check if the aligner exists -- if it does, call it with the given parameters.
-def align():
+def align(param_list):
   path = os.path.abspath("aligner")
   
   if os.path.exists(path):
-    subprocess.call([path] + sys.argv[2:])
+    subprocess.call([path] + param_list)
   else:
     print("Error -- no aligner found. Please run the 'immunogenotyper download' command.\n")
-    print(USAGE_STRING)
     sys.exit()
 
 
 if __name__ == "__main__":
-  print_usage_and_exit = True
-  if len(sys.argv) == 1:
-    pass
-  elif sys.argv[1] == "help":
-    pass
+  if len(sys.argv) == 1: # Ensure we can index sys.argv[1]
+    print(USAGE_STRING)
+    sys.exit()
   elif sys.argv[1] == "download" and len(sys.argv) <= 3:
-    download_aligner()
-    print_usage_and_exit = False
+    download_aligner(sys.argv[2:])
   elif sys.argv[1] == "generate" and len(sys.argv) == 5:
-    create_editable_config()
-    print_usage_and_exit = False
+    create_editable_config(sys.argv[2], sys.argv[3], sys.argv[4])
   elif sys.argv[1] == "compile" and len(sys.argv) == 5:
-    compile_config()
-    print_usage_and_exit = False
+    compile_config(sys.argv[2], sys.argv[3], sys.argv[4])
   elif sys.argv[1] == "align":
-    align()
-    print_usage_and_exit = False
-
-  if print_usage_and_exit:
+    align(sys.argv[2:])
+  elif sys.argv[1] == "filter" and len(sys.argv) == 5:
+    filter(sys.argv[2], sys.argv[3], sys.argv[4])
+  else:
     print(USAGE_STRING)
     sys.exit()
