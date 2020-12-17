@@ -9,7 +9,7 @@ import argparse
 from pathlib import Path
 from Bio import SeqIO
 
-from filtering import filter
+from reporting import report
 
 USAGE_STRING = """usage:
   immunogenotyper download <OPTIONAL:aligner_version>
@@ -20,7 +20,7 @@ USAGE_STRING = """usage:
 
   immunogenotyper align <reference.json> <reference.fasta> <input>...
 
-  immunogenotyper filter <reference.json> <results.tsv> <output.tsv>
+  immunogenotyper report <reference.json> <results.tsv> <output.tsv>
 
   immunogenotyper help
   """
@@ -136,8 +136,8 @@ if __name__ == "__main__":
     compile_config(sys.argv[2], sys.argv[3], sys.argv[4])
   elif sys.argv[1] == "align":
     align(sys.argv[2:])
-  elif sys.argv[1] == "filter" and len(sys.argv) == 5:
-    filter(sys.argv[2], sys.argv[3], sys.argv[4])
+  elif sys.argv[1] == "report" and len(sys.argv) == 5:
+    report(sys.argv[2], sys.argv[3], sys.argv[4])
   else:
     print(USAGE_STRING)
     sys.exit()
