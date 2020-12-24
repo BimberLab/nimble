@@ -33,6 +33,7 @@ class Config():
     self.discard_multiple_matches = False
     self.intersect_level = 0
     self.group_on = ""
+    self.discard_multi_hits = 0
     self.require_valid_pair = False
 
 
