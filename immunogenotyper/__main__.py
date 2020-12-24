@@ -20,7 +20,7 @@ USAGE_STRING = """usage:
 
   immunogenotyper align <reference.json> <reference.fasta> <input>...
 
-  immunogenotyper report <reference.json> <results.tsv> <output.tsv>
+  immunogenotyper report simple <results.tsv> <output.tsv>
 
   immunogenotyper help
   """
@@ -33,6 +33,7 @@ class Config():
     self.discard_multiple_matches = False
     self.intersect_level = 0
     self.group_on = ""
+    self.require_valid_pair = False
 
 
 class Data():

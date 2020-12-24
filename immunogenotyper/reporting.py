@@ -1,7 +1,17 @@
 import csv
 
-def report(reference_path, results_path, output_path):
+
+def simple_filter(data):
+  pass
+
+
+def report(method, results_path, output_path):
   with open(results_path, "r") as f:
     data = csv.reader(f, delimiter="\t")
-    for row in data:
-      print(row)
+
+    if method == "simple":
+      simple_filter(data)
+    else:
+      print("\nNo such reporting method. Please choose from the following list (documentation is at https://github.com/devsebb/ImmunoGenotyperLibraryifier/blob/main/README.md):")
+      print("\tsimple")
+      print("")
