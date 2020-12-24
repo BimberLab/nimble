@@ -1,5 +1,7 @@
 from io import StringIO
 import pandas as pd
+import numpy as np
+
 from usage import print_usage_and_exit
 
 
@@ -27,11 +29,28 @@ def write_data(output_path, out_data):
     pass
 
 
+def get_unique_references(data):
+  return pd.unique(data[data.columns].values.ravel('K'))
+
+
 def min_pct(data, pct):
   if pct == None:
     pct = 0.01
 
-  return ""
+  num_reads_total = data.shape[0]
+  references = get_unique_references(data)
+  references_to_drop = []
+
+  for reference in references:
+    num_reads = len(data[data.apply(lambda x: reference in x.values, axis=1)])
+
+    if (num_reads / num_reads_total < pct):
+      references_to_drop.append(reference)
+
+  for reference in references_to_drop:
+    data = data.replace(reference, np.nan)
+
+  return data
 
 
 def min_count(data, value):
