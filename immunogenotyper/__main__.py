@@ -10,20 +10,8 @@ from pathlib import Path
 from Bio import SeqIO
 
 from reporting import report
+from usage import print_usage_and_exit
 
-USAGE_STRING = """usage:
-  immunogenotyper download <OPTIONAL:aligner_version>
-
-  immunogenotyper generate <fasta_path> <reference_json_path> <aligner_config_json_path>
-
-  immunogenotyper compile <reference_json_path> <aligner_config_json_path> <compiled_json_path>
-
-  immunogenotyper align <reference.json> <reference.fasta> <input>...
-
-  immunogenotyper report simple <results.tsv> <output.tsv>
-
-  immunogenotyper help
-  """
 
 class Config():
   def __init__(self):
@@ -128,8 +116,7 @@ def align(param_list):
 
 if __name__ == "__main__":
   if len(sys.argv) == 1: # Ensure we can index sys.argv[1]
-    print(USAGE_STRING)
-    sys.exit()
+    print_usage_and_exit()
   elif sys.argv[1] == "download" and len(sys.argv) <= 3:
     download_aligner(sys.argv[2:])
   elif sys.argv[1] == "generate" and len(sys.argv) == 5:
@@ -138,8 +125,10 @@ if __name__ == "__main__":
     compile_config(sys.argv[2], sys.argv[3], sys.argv[4])
   elif sys.argv[1] == "align":
     align(sys.argv[2:])
-  elif sys.argv[1] == "report" and len(sys.argv) == 5:
-    report(sys.argv[2], sys.argv[3], sys.argv[4])
+  elif sys.argv[1] == "report" and len(sys.argv) >= 5 and len(sys.argv) <= 6:
+    if len(sys.argv) == 5:
+      report(sys.argv[2], None, sys.argv[3], sys.argv[4])
+    else:
+      report(sys.argv[2], sys.argv[3], sys.argv[4], sys.argv[5])
   else:
-    print(USAGE_STRING)
-    sys.exit()
+    print_usage_and_exit()
