@@ -7,7 +7,7 @@ from usage import print_usage_and_exit
 
 def load_data(input_path):
   with open(input_path, "r") as f:
-    next(f)
+    metadata = [next(f)]
 
     str_rep = ""
     max_line_len = 0
@@ -20,13 +20,22 @@ def load_data(input_path):
       if(curr_line_len > max_line_len):
         max_line_len = curr_line_len
 
+      metadata.append(line.split("\t")[1:])
+
   names = [i for i in range(0, max_line_len)]
-  return pd.read_csv(StringIO(str_rep), header=None, names=names)
+  return (pd.read_csv(StringIO(str_rep), header=None, names=names), metadata)
 
 
-def write_data(output_path, out_data):
+def write_data(output_path, out_data, metadata):
   with open(output_path, "w") as f:
-    pass
+    metadata = iter(metadata)
+    f.write(next(metadata))
+    
+    for row in out_data.apply(lambda row: row.values[~pd.isna(row.values)], axis=1):
+      line_metadata = "\t".join([elem for elem in next(metadata)])
+      
+      if len(row) > 0:
+        f.write(",".join([reference for reference in row]) + "\t" + line_metadata)
 
 
 def get_unique_references(data):
@@ -42,7 +51,7 @@ def min_pct(data, pct):
   references_to_drop = []
 
   for reference in references:
-    num_reads = len(data[data.apply(lambda x: reference in x.values, axis=1)])
+    num_reads = len(data[data.apply(lambda row: reference in row.values, axis=1)])
 
     if (num_reads / num_reads_total < pct):
       references_to_drop.append(reference)
@@ -68,7 +77,7 @@ def min_pct_lineage(data, value):
 
 
 def report(method, value, results_path, output_path):
-  data = load_data(results_path)
+  (data, metadata) = load_data(results_path)
 
   out_data = None
 
@@ -81,4 +90,4 @@ def report(method, value, results_path, output_path):
   else:
     print_usage_and_exit()
 
-  write_data(output_path, out_data)
+  write_data(output_path, out_data, metadata)
