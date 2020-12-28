@@ -2,7 +2,7 @@ from io import StringIO
 import pandas as pd
 import numpy as np
 
-from usage import print_usage_and_exit
+from immunogenotyper.usage import print_usage_and_exit
 
 
 def load_data(input_path):
