@@ -30,7 +30,7 @@ def write_data(output_path, out_data, metadata):
   with open(output_path, "w") as f:
     metadata = iter(metadata)
     f.write(next(metadata))
-    
+
     for row in out_data.apply(lambda row: row.values[~pd.isna(row.values)], axis=1):
       line_metadata = "\t".join([elem for elem in next(metadata)])
       
@@ -62,11 +62,23 @@ def min_pct(data, pct):
   return data
 
 
-def min_count(data, value):
+def min_count(data, count):
   if count == None:
     count = 5
 
-  return ""
+  references = get_unique_references(data)
+  references_to_drop = []
+
+  for reference in references:
+    num_reads = len(data[data.apply(lambda row: reference in row.values, axis=1)])
+
+    if (num_reads < count):
+      references_to_drop.append(reference)
+
+  for reference in references_to_drop:
+    data = data.replace(reference, np.nan)
+
+  return data
 
 
 def min_pct_lineage(data, value):
