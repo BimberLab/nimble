@@ -10,7 +10,7 @@ def load_data(input_path):
     max_line_len = 0
 
     for line in f:
-      csv_line = line.split("\t")[0]
+      csv_line = line.split("\t")[1].strip() + "," + line.split("\t")[0] + "\n"
       str_rep += csv_line + "\n"
       curr_line_len = len(csv_line.split(","))
 
@@ -24,6 +24,8 @@ def load_data(input_path):
 
 
 def write_data(output_path, out_data, metadata):
+  out_data = out_data.drop(0, axis=1)
+
   with open(output_path, "w") as f:
     metadata = iter(metadata)
     f.write(next(metadata))
@@ -36,19 +38,19 @@ def write_data(output_path, out_data, metadata):
 
 
 def get_unique_references(data):
-  return pd.unique(data[data.columns].values.ravel('K'))
+  return pd.unique(data[data.columns[1:]].values.ravel('K'))
 
 
 def min_pct(data, pct):
   if pct == None:
     pct = 0.01
 
-  num_reads_total = data.shape[0]
+  num_reads_total = data[0].sum()
   references = get_unique_references(data)
   references_to_drop = []
 
   for reference in references:
-    num_reads = len(data[data.apply(lambda row: reference in row.values, axis=1)])
+    num_reads = data[data.apply(lambda row: reference in row.values, axis=1)][0].sum()
 
     if (num_reads / num_reads_total < pct):
       references_to_drop.append(reference)
@@ -67,7 +69,7 @@ def min_count(data, count):
   references_to_drop = []
 
   for reference in references:
-    num_reads = len(data[data.apply(lambda row: reference in row.values, axis=1)])
+    num_reads = data[data.apply(lambda row: reference in row.values, axis=1)][0].sum()
 
     if (num_reads < count):
       references_to_drop.append(reference)
