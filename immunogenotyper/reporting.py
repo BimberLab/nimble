@@ -2,9 +2,6 @@ from io import StringIO
 import pandas as pd
 import numpy as np
 
-from immunogenotyper.usage import print_usage_and_exit
-
-
 def load_data(input_path):
   with open(input_path, "r") as f:
     metadata = [next(f)]
@@ -89,6 +86,8 @@ def min_pct_lineage(data, value):
 
 
 def report(method, value, results_path, output_path):
+  from usage import print_usage_and_exit
+
   (data, metadata) = load_data(results_path)
 
   out_data = None
