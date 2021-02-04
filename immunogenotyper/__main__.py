@@ -10,8 +10,8 @@ import argparse
 from pathlib import Path
 from Bio import SeqIO
 
-from reporting import report
-from usage import print_usage_and_exit
+from immunogenotyper.reporting import report
+from immunogenotyper.usage import print_usage_and_exit
 
 
 class Config():
