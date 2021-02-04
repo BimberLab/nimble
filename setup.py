@@ -20,7 +20,8 @@ setuptools.setup(
     ],
     install_requires = [
         "requests",
-        "biopython"
+        "biopython",
+        "pandas"
     ],
     python_requires='>=3.6',
 )
