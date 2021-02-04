@@ -7,6 +7,7 @@ import subprocess
 import stat
 import json
 import argparse
+import distro
 from pathlib import Path
 from Bio import SeqIO
 
@@ -68,7 +69,11 @@ def get_exec_name_from_platform():
   if sys.platform == "win32":
     exec_name = "windows.exe"
   elif sys.platform == "linux":
-    exec_name = "Linux.x86"
+    # Detect Centos7 vs other distros
+    if distro.id() == "centos":
+      exec_name = "Centos.out"
+    else:
+      exec_name = "Ubuntu.out"
   elif sys.platform == "darwin":
     exec_name = "Mac.app"
   else:
@@ -96,7 +101,7 @@ def download_aligner(release):
   if r.status_code == 200:
     with open('aligner', 'wb') as f:
       f.write(r.content)
-    if exec_name == "Linux.x86" or exec_name == "Mac.app":
+    if exec_name == "Ubuntu.out" or exec_name == "Centos.out" or exec_name == "MacOS.out":
       st = os.stat('aligner')
       os.chmod('aligner', st.st_mode | stat.S_IEXEC)
   else:
@@ -116,7 +121,8 @@ def align(param_list):
 
 
 if __name__ == "__main__":
-  if len(sys.argv) == 1: # Ensure we can index sys.argv[1]
+  print(os.path.realpath(__file__))
+  """if len(sys.argv) == 1: # Ensure we can index sys.argv[1]
     print_usage_and_exit()
   elif sys.argv[1] == "download" and len(sys.argv) <= 3:
     download_aligner(sys.argv[2:])
@@ -132,4 +138,4 @@ if __name__ == "__main__":
     else:
       report(sys.argv[2], sys.argv[3], sys.argv[4], sys.argv[5])
   else:
-    print_usage_and_exit()
+    print_usage_and_exit()"""
