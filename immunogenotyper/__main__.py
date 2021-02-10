@@ -71,7 +71,9 @@ def get_exec_name_from_platform():
   elif sys.platform == "linux":
     # Detect Centos7 vs other distros
     if distro.id() == "centos":
-      exec_name = "Centos.out"
+      exec_name = "CentOS.out"
+    elif distro.id() == "manjaro":
+      exec_name = "Manjaro.out"
     else:
       exec_name = "Ubuntu.out"
   elif sys.platform == "darwin":
@@ -97,13 +99,15 @@ def download_aligner(release):
   # Download aligner
   r = requests.get(url)
 
+  aligner_path = os.path.join(os.path.dirname(os.path.realpath(__file__)), "aligner")
+
   # If we successfully downloaded it, write the file to disk and give it execution permissions if necessary
   if r.status_code == 200:
-    with open('aligner', 'wb') as f:
+    with open(aligner_path, 'wb') as f:
       f.write(r.content)
-    if exec_name == "Ubuntu.out" or exec_name == "Centos.out" or exec_name == "MacOS.out":
-      st = os.stat('aligner')
-      os.chmod('aligner', st.st_mode | stat.S_IEXEC)
+    if sys.platform == "linux" or sys.platform == "darwin":
+      st = os.stat(aligner_path)
+      os.chmod(aligner_path, st.st_mode | stat.S_IEXEC)
   else:
     print("Error -- could not download aligner, status code " + str(r.status_code))
     sys.exit()
@@ -111,7 +115,7 @@ def download_aligner(release):
 
 # Check if the aligner exists -- if it does, call it with the given parameters.
 def align(param_list):
-  path = os.path.abspath("aligner")
+  path = os.path.join(os.path.dirname(os.path.realpath(__file__)), "aligner")
   
   if os.path.exists(path):
     subprocess.call([path] + param_list)
@@ -121,8 +125,7 @@ def align(param_list):
 
 
 if __name__ == "__main__":
-  print(os.path.realpath(__file__))
-  """if len(sys.argv) == 1: # Ensure we can index sys.argv[1]
+  if len(sys.argv) == 1: # Ensure we can index sys.argv[1]
     print_usage_and_exit()
   elif sys.argv[1] == "download" and len(sys.argv) <= 3:
     download_aligner(sys.argv[2:])
@@ -138,4 +141,4 @@ if __name__ == "__main__":
     else:
       report(sys.argv[2], sys.argv[3], sys.argv[4], sys.argv[5])
   else:
-    print_usage_and_exit()"""
+    print_usage_and_exit()
