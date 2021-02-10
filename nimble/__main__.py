@@ -11,8 +11,8 @@ import distro
 from pathlib import Path
 from Bio import SeqIO
 
-from immunogenotyper.reporting import report
-from immunogenotyper.usage import print_usage_and_exit
+from nimble.reporting import report
+from nimble.usage import print_usage_and_exit
 
 
 class Config():
