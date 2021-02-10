@@ -10,7 +10,7 @@ usage:
 
   python -m nimble compile <reference_json_path> <aligner_config_json_path> <compiled_json_path>
 
-  python -m nimble align <reference.json> <reference.fasta> <input>...
+  python -m nimble align <reference.json> <input>...
 
   python -m nimble report <method> <method parameters...> <output.tsv> <input.tsv> <output.tsv>
     Reporting methods:
