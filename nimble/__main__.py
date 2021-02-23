@@ -29,7 +29,7 @@ class Config():
 
 class Data():
   def __init__(self):
-    self.headers = ["reference_genome", "nt_sequence", "nt_length", "sequence"]
+    self.headers = ["reference_genome", "sequence_name", "nt_length", "sequence"]
     self.columns = [[], [], [], []]
 
 
