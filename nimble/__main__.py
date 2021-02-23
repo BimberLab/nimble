@@ -11,8 +11,8 @@ import distro
 from pathlib import Path
 from Bio import SeqIO
 
-from immunogenotyper.reporting import report
-from immunogenotyper.usage import print_usage_and_exit
+from nimble.reporting import report
+from nimble.usage import print_usage_and_exit
 
 
 class Config():
@@ -29,8 +29,8 @@ class Config():
 
 class Data():
   def __init__(self):
-    self.headers = ["reference_genome", "nt_sequence", "nt_length"]
-    self.columns = [[], [], []]
+    self.headers = ["reference_genome", "sequence_name", "nt_length", "sequence"]
+    self.columns = [[], [], [], []]
 
 
 # Take human-editable config json files and compile into a single minified file for the aligner
@@ -51,8 +51,9 @@ def create_editable_config(seq_path, reference_output_path, config_output_path):
   # Fill data structure containing the reference library
   for record in SeqIO.parse(seq_path, "fasta"):
     data.columns[0].append(reference_genome)
-    data.columns[1].append(record.id,)
+    data.columns[1].append(record.id)
     data.columns[2].append(str(len(record)))
+    data.columns[3].append(str(record.seq))
 
   # Write reference and default config to disk
   with open(reference_output_path, "w") as f:

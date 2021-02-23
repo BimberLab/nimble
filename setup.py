@@ -4,14 +4,14 @@ with open("README.md", "r") as f:
     long_description = f.read()
 
 setuptools.setup(
-    name="immunogenotyper",
+    name="nimble",
     version="0.1.0",
     author="Sebastian Benjamin",
     author_email="benjamse@ohsu.edu",
     description="A tool for generating calls on bulk-seq and 10x RNA genomes",
     long_description=long_description,
     long_description_content_type="text/markdown",
-    url="https://github.com/devsebb/ImmunoGenotyperLibraryifier",
+    url="https://github.com/devsebb/nimble",
     packages=setuptools.find_packages(),
     classifiers=[
         "Programming Language :: Python :: 3",

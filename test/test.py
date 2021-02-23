@@ -2,8 +2,8 @@ import unittest
 import pandas as pd
 import numpy as np
 
-import immunogenotyper
-from immunogenotyper.reporting import min_count, min_pct
+import nimble
+from nimble.reporting import min_count, min_pct
 
 
 class TestFiltering(unittest.TestCase):
