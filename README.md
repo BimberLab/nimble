@@ -4,7 +4,7 @@ nimble is a fast, accurate, and configurable bulk RNA sequence aligner that exec
 
 # Installation
 
-nimble's only dependency is Python 3. It runs on the following operating systems:
+nimble's only dependency is Python 3. It supports the following operating systems:
 
 - Windows
 - MacOS
