@@ -88,8 +88,6 @@ def min_pct_lineage(data, value):
 
 
 def report(method, value, results_path, output_path):
-  from usage import print_usage_and_exit
-
   (data, metadata) = load_data(results_path)
 
   out_data = None
@@ -101,6 +99,6 @@ def report(method, value, results_path, output_path):
   elif method == "minPctLineage":
     out_data = min_pct_lineage(data, value)
   else:
-    print_usage_and_exit()
+    print("Incorrect format. Please see 'nimble help'.")
 
   write_data(output_path, out_data, metadata)
