@@ -24,7 +24,7 @@ For usage examples, refer to the [quickstart guide](https://github.com/BimberLab
 
 # Documentation
 
-Detailed documentation can be found at the [GitHub wiki](https://github.com/BimberLab/nimble/wiki).
+Detailed documentation can be found at the [wiki](https://github.com/BimberLab/nimble/wiki).
 
 The source code for the backend aligner can be found [here](https://github.com/BimberLab/nimble-aligner).
 
