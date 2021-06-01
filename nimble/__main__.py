@@ -25,6 +25,7 @@ class Config():
     self.group_on = ""
     self.discard_multi_hits = 0
     self.require_valid_pair = False
+    self.data_type = "RNA"
 
 
 class Data():
@@ -36,7 +37,7 @@ class Data():
 # Take human-editable config json files and compile into a single minified file for the aligner
 def compile_config(reference_output_path, config_output_path, compiled_json_path):
   with open(reference_output_path, "r") as ref, open(config_output_path, "r") as conf, open(compiled_json_path, "w") as comp:
-    reference = json.load(ref)
+    reference = json.load(refAlive)
     config = json.load(conf)
     json.dump([config, reference], comp)
 
