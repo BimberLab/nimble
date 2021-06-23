@@ -11,7 +11,7 @@ setuptools.setup(
     description="A tool for generating calls on bulk-seq and 10x RNA genomes",
     long_description=long_description,
     long_description_content_type="text/markdown",
-    url="https://github.com/devsebb/nimble",
+    url="https://github.com/BimberLab/nimble",
     packages=setuptools.find_packages(),
     classifiers=[
         "Programming Language :: Python :: 3",

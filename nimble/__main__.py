@@ -1,60 +1,38 @@
 #!/usr/bin/env python
 import sys
 from sys import platform
-import requests 
 import os
+import argparse
 import subprocess
+import requests 
 import stat
 import json
-import argparse
-import distro
-from pathlib import Path
-from Bio import SeqIO
+import zipfile
 
 from nimble.reporting import report
 from nimble.usage import print_usage_and_exit
-
-
-class Config():
-  def __init__(self):
-    self.score_threshold = 60
-    self.score_filter = 25
-    self.num_mismatches = 0
-    self.discard_multiple_matches = False
-    self.intersect_level = 0
-    self.group_on = ""
-    self.discard_multi_hits = 0
-    self.require_valid_pair = False
-    self.data_type = "RNA"
-
-
-class Data():
-  def __init__(self):
-    self.headers = ["reference_genome", "sequence_name", "nt_length", "sequence"]
-    self.columns = [[], [], [], []]
+from nimble.types import Config
+from nimble.utils import get_exec_name_from_platform
+from nimble.parse import parse_fasta, parse_bam
 
 
 # Take human-editable config json files and compile into a single minified file for the aligner
 def compile_config(reference_output_path, config_output_path, compiled_json_path):
   with open(reference_output_path, "r") as ref, open(config_output_path, "r") as conf, open(compiled_json_path, "w") as comp:
-    reference = json.load(refAlive)
+    reference = json.load(ref)
     config = json.load(conf)
     json.dump([config, reference], comp)
 
 
 # Generate and write human-editable config json files to disk
 def create_editable_config(seq_path, reference_output_path, config_output_path):
-  # Generate reference genome name by getting the filename and prettifying it
-  reference_genome = Path(seq_path).stem.replace("_", " ")
+  # Determine if we're working with .fasta or a zipped .bam
+  file_ext = os.path.splitext(seq_path)[1]
 
-  data = Data()
-
-  # Fill data structure containing the reference library
-  for record in SeqIO.parse(seq_path, "fasta"):
-    data.columns[0].append(reference_genome)
-    data.columns[1].append(record.id)
-    data.columns[2].append(str(len(record)))
-    data.columns[3].append(str(record.seq))
+  if file_ext == ".fasta":
+    data = parse_fasta(seq_path)
+  elif file_ext == ".bam":
+    data = parse_bam(seq_path)
 
   # Write reference and default config to disk
   with open(reference_output_path, "w") as f:
@@ -63,30 +41,7 @@ def create_editable_config(seq_path, reference_output_path, config_output_path):
   with open(config_output_path, "w") as f:
     json.dump(Config().__dict__, f, indent=2)
 
-
-# Get the name of a Github release given the target platform
-def get_exec_name_from_platform():
-  exec_name = ""
-
-  if sys.platform == "win32":
-    exec_name = "windows.exe"
-  elif sys.platform == "linux":
-    # Detect Centos7 vs other distros
-    if distro.id() == "centos":
-      exec_name = "CentOS.out"
-    elif distro.id() == "manjaro":
-      exec_name = "Manjaro.out"
-    else:
-      exec_name = "Ubuntu.out"
-  elif sys.platform == "darwin":
-    exec_name = "Mac.app"
-  else:
-    print("Error -- platform " + sys.platform + " does not have a compatible release on GitHub.")
-    sys.exit()
-
-  return exec_name
-
-
+  
 # Given the name of a release, download the platform-specific executable from that release.
 # Given no name, default to the most recent release.
 def download_aligner(release):
@@ -94,9 +49,9 @@ def download_aligner(release):
 
   url = ""
   if len(release) == 1:
-    url = "https://github.com/devsebb/ImmunoGenotyper/releases/download/" + release[0] + "/" + exec_name
+    url = "https://github.com/BimberLab/nimble-aligner/releases/download/" + release[0] + "/" + exec_name
   else:
-    url = "https://github.com/devsebb/ImmunoGenotyper/releases/latest/download/" + exec_name
+    url = "https://github.com/BimberLab/nimble-aligner/releases/latest/download/" + exec_name
 
   # Download aligner
   r = requests.get(url)
