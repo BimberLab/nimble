@@ -25,20 +25,20 @@ def parse_fasta(seq_path):
 
 
 def parse_bam(seq_path):
-  # TODO detect if its a 10x bam or a regular one
-  # Add empty CellBarcode and UMI
-  #data.headers.extend(["UMI", "cell_barcode"])
-  #data.columns.extend([[], []])
+  is_single_cell = False
 
   data = Data()
+
+  # Add empty CellBarcode and UMI
+  if is_single_cell:
+    data.headers.extend(["UMI", "cell_barcode"])
+    data.columns.extend([[], []])
 
   library_name = get_library_name_from_filename(seq_path)
 
   for read in pysam.AlignmentFile(seq_path, "rb"):
     seq = read.query_sequence
 
-    print(a.tags)
-    
     data.columns[0].append(library_name)
     data.columns[1].append(read.reference_name)
     data.columns[2].append(len(seq))

@@ -22,7 +22,8 @@ setuptools.setup(
         "requests",
         "biopython",
         "pandas",
-        "distro"
+        "distro",
+        "pysam"
     ],
     python_requires='>=3.6',
 )
