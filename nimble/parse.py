@@ -71,7 +71,6 @@ def parse_bam(seq_path):
 
     data.columns[0].append(library_name)
 
-    print(read.reference_name)
     if read.reference_name is not None:
       data.columns[1].append(read.reference_name)
     else:
