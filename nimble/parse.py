@@ -76,7 +76,7 @@ def parse_bam(seq_path):
     else:
       data.columns[1].append("null")
 
-    data.columns[2].append(len(seq))
+    data.columns[2].append(str(len(seq)))
     data.columns[3].append(seq)
 
     if is_single_cell:
