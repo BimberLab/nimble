@@ -19,7 +19,12 @@ def parse_fasta(seq_path):
   f = SeqIO.parse(seq_path, "fasta")
   for record in f:
     data.columns[0].append(reference_name)
-    data.columns[1].append(record.id)
+
+    if record.id is not None:
+      data.columns[1].append(record.id)
+    else:
+      data.columns[1].append("null")
+
     data.columns[2].append(str(len(record)))
     data.columns[3].append(str(record.seq))
 
@@ -54,8 +59,8 @@ def parse_bam(seq_path):
 
         # Fill columns up to this read with None
         for _ in range(0, index):
-          data.columns[4].append(None)
-          data.columns[5].append(None)
+          data.columns[4].append("null")
+          data.columns[5].append("null")
 
         is_single_cell = True
         config.data_type = DataType.SINGLECELL
@@ -65,13 +70,27 @@ def parse_bam(seq_path):
     seq = read.query_sequence
 
     data.columns[0].append(library_name)
-    data.columns[1].append(read.reference_name)
+
+    print(read.reference_name)
+    if read.reference_name is not None:
+      data.columns[1].append(read.reference_name)
+    else:
+      data.columns[1].append("null")
+
     data.columns[2].append(len(seq))
     data.columns[3].append(seq)
 
     if is_single_cell:
-      data.columns[4].append(cell_barcode)
-      data.columns[5].append(molecular_barcode)
+      if cell_barcode is not None:
+        data.columns[4].append(cell_barcode)
+      else:
+        data.columns[4].append("null")
+
+      if molecular_barcode is not None:
+        data.columns[5].append(molecular_barcode)
+      else:
+        data.columns[4].append("null")
+
 
   return (data, config)
 
