@@ -1,6 +1,5 @@
 #!/usr/bin/env python
 import sys
-from sys import platform
 import os
 import argparse
 import subprocess
@@ -8,6 +7,8 @@ import requests
 import stat
 import json
 import zipfile
+
+from sys import platform
 
 from nimble.reporting import report
 from nimble.usage import print_usage_and_exit
@@ -29,17 +30,20 @@ def create_editable_config(seq_path, reference_output_path, config_output_path):
   # Determine if we're working with .fasta or a zipped .bam
   file_ext = os.path.splitext(seq_path)[1]
 
+  data = None
+  config = None
+
   if file_ext == ".fasta":
-    data = parse_fasta(seq_path)
+    (data, config) = parse_fasta(seq_path)
   elif file_ext == ".bam":
-    data = parse_bam(seq_path)
+    (data, config) = parse_bam(seq_path)
 
   # Write reference and default config to disk
   with open(reference_output_path, "w") as f:
     json.dump(data.__dict__, f, indent=2)
 
   with open(config_output_path, "w") as f:
-    json.dump(Config().__dict__, f, indent=2)
+    json.dump(config.__dict__, f, indent=2)
 
   
 # Given the name of a release, download the platform-specific executable from that release.

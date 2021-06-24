@@ -1,11 +1,14 @@
 from enum import Enum
 
+
+# Enum that specifies what type of data is in the output reference library
 class DataType(str, Enum):
   FASTA = "fasta"
   BAM = "bam"
   SINGLECELL = "single-cell"
 
 
+# Alignment config to be serialized and passed to the backend aligner
 class Config():
   def __init__(self):
     self.score_threshold = 60
@@ -16,9 +19,10 @@ class Config():
     self.group_on = ""
     self.discard_multi_hits = 0
     self.require_valid_pair = False
-    self.data_type = DataType.SINGLECELL
+    self.data_type = DataType.BAM
 
 
+# Type to contain the actual sequence data/metadata. Can be arbitrarily modified at runtime to contain any metadata.
 class Data():
   def __init__(self):
     self.headers = ["reference_genome", "sequence_name", "nt_length", "sequence"]

@@ -3,7 +3,7 @@ import pandas as pd
 import numpy as np
 
 import nimble
-from nimble.reporting import min_count, min_pct
+from nimble.reporting import _min_count, _min_pct
 
 
 class TestFiltering(unittest.TestCase):
@@ -17,7 +17,7 @@ class TestFiltering(unittest.TestCase):
         }
 
     data = pd.DataFrame(data)
-    data = min_count(data, 100)
+    data = _min_count(data, 100)
 
     expected = {
          0: [25, 25, 25, 25],
@@ -40,7 +40,7 @@ class TestFiltering(unittest.TestCase):
         }
 
     data = pd.DataFrame(data)
-    data = min_count(data, 75)
+    data = _min_count(data, 75)
 
     expected = {
          0: [25, 25, 25, 25],
@@ -63,7 +63,7 @@ class TestFiltering(unittest.TestCase):
         }
 
     data = pd.DataFrame(data)
-    data = min_count(data, 50)
+    data = _min_count(data, 50)
 
     expected = {
          0: [25, 25, 25, 25],
@@ -86,7 +86,7 @@ class TestFiltering(unittest.TestCase):
         }
 
     data = pd.DataFrame(data)
-    data = min_pct(data, 1)
+    data = _min_pct(data, 1)
 
     expected = {
          0: [25, 25, 25, 25],
@@ -109,7 +109,7 @@ class TestFiltering(unittest.TestCase):
         }
 
     data = pd.DataFrame(data)
-    data = min_pct(data, .75)
+    data = _min_pct(data, .75)
 
     expected = {
          0: [25, 25, 25, 25],
@@ -132,7 +132,7 @@ class TestFiltering(unittest.TestCase):
         }
 
     data = pd.DataFrame(data)
-    data = min_pct(data, .5)
+    data = _min_pct(data, .5)
 
     expected = {
          0: [25, 25, 25, 25],

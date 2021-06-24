@@ -33,6 +33,7 @@ def get_exec_name_from_platform():
   return exec_name
 
 
+# Serialize results of an alignment/filter to output TSV
 def write_data_to_tsv(output_path, out_data, metadata):
   out_data = out_data.drop(0, axis=1)
 

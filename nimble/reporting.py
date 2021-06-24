@@ -5,11 +5,13 @@ from nimble.parse import load_data_from_tsv
 from nimble.utils import write_data_to_tsv
 
 
+# Get the number of unique reference names in a readset
 def _get_unique_references(data):
   return pd.unique(data[data.columns[1:]].values.ravel('K'))
 
 
-def min_pct(data, pct):
+# Filter reads via a threshold on the minimum percentage of total reads
+def _min_pct(data, pct):
   if pct == None:
     pct = 0.01
 
@@ -29,7 +31,8 @@ def min_pct(data, pct):
   return data
 
 
-def min_count(data, count):
+# Filter reads via a threshold on the minimum number of hits
+def _min_count(data, count):
   if count == None:
     count = 5
 
@@ -48,24 +51,16 @@ def min_count(data, count):
   return data
 
 
-def min_pct_lineage(data, value):
-  if pct == None:
-    pct = 0.01
-
-  return ""
-
-
+# API for this module
 def report(method, value, results_path, output_path):
   (data, metadata) = load_data_from_tsv(results_path)
 
   out_data = None
 
   if method == "minPct":
-    out_data = min_pct(data, value)
+    out_data = _min_pct(data, value)
   elif method == "minCount":
-    out_data = min_count(data, value)
-  elif method == "minPctLineage":
-    out_data = min_pct_lineage(data, value)
+    out_data = _min_count(data, value)
   else:
     print("Incorrect format. Please see 'nimble help'.")
 

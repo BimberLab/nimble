@@ -20,6 +20,7 @@ usage:
 
   python -m nimble help"""
 
+
 def print_usage_and_exit():
   print(USAGE_STRING)
   sys.exit()
