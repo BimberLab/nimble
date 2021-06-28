@@ -6,7 +6,7 @@ class DataType(str, Enum):
   FASTA = "fasta"
   BAM = "bam"
   SINGLECELL = "single-cell"
-
+  
 
 # Alignment config to be serialized and passed to the backend aligner
 class Config():
@@ -20,6 +20,7 @@ class Config():
     self.discard_multi_hits = 0
     self.require_valid_pair = False
     self.data_type = DataType.BAM
+    self.filters = []
 
 
 # Type to contain the actual sequence data/metadata. Can be arbitrarily modified at runtime to contain any metadata.

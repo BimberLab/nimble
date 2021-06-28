@@ -1,3 +1,5 @@
+import json
+
 import pandas as pd
 import pysam
 
@@ -95,7 +97,7 @@ def parse_bam(seq_path):
 
 
 # Read data from the backend aligner's output format -- a TSV
-def load_data_from_tsv(input_path):
+def parse_alignment_results(input_path):
   with open(input_path, "r") as f:
     metadata = [next(f)]
 
@@ -114,3 +116,18 @@ def load_data_from_tsv(input_path):
 
   names = [i for i in range(0, max_line_len)]
   return (pd.read_csv(StringIO(str_rep), header=None, names=names), metadata)
+
+
+# Parse the reference.json format for the list of filters and their configurations
+def parse_filter_config(reference_path):
+  methods = []
+  values = []
+
+  with open(reference_path) as ref:
+    data = json.load(ref)
+
+  for method in data[0]["filters"]:
+    methods.append(method["name"])
+    values.append(method["value"])
+
+  return (methods, values)

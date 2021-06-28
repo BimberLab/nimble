@@ -1,7 +1,7 @@
 import pandas as pd
 import numpy as np
 
-from nimble.parse import load_data_from_tsv
+from nimble.parse import parse_alignment_results
 from nimble.utils import write_data_to_tsv
 
 
@@ -51,10 +51,8 @@ def _min_count(data, count):
   return data
 
 
-# API for this module
-def report(method, value, results_path, output_path):
-  (data, metadata) = load_data_from_tsv(results_path)
-
+# Run the given method with the given value and return the data/metadata
+def _filter(data, metadata, method, value):
   out_data = None
 
   if method == "minPct":
@@ -62,6 +60,16 @@ def report(method, value, results_path, output_path):
   elif method == "minCount":
     out_data = _min_count(data, value)
   else:
-    print("Incorrect format. Please see 'nimble help'.")
+    raise ValueError("No such filter, " + method)
 
-  write_data_to_tsv(output_path, out_data, metadata)
+  return (out_data, metadata)
+
+
+# API for this module. Can chain reports in an order provided by the methods list.
+def report(methods, values, results_path, output_path):
+  (data, metadata) = parse_alignment_results(results_path)
+
+  for (method, value) in zip(methods, values):
+    (data, metadata) = _filter(data, metadata, method, value)
+
+  write_data_to_tsv(output_path, data, metadata)

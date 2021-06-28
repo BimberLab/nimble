@@ -10,11 +10,11 @@ import zipfile
 
 from sys import platform
 
-from nimble.reporting import report
-from nimble.usage import print_usage_and_exit
 from nimble.types import Config
+from nimble.parse import parse_fasta, parse_bam, parse_filter_config 
+from nimble.usage import print_usage_and_exit
 from nimble.utils import get_exec_name_from_platform
-from nimble.parse import parse_fasta, parse_bam
+from nimble.reporting import report
 
 
 # Take human-editable config json files and compile into a single minified file for the aligner
@@ -81,7 +81,7 @@ def align(param_list):
   if os.path.exists(path):
     subprocess.call([path] + param_list)
   else:
-    print("Error -- no aligner found. Please run the 'immunogenotyper download' command.\n")
+    print("Error -- no aligner found. Please run the 'python -m nimble download' command.\n")
     sys.exit()
 
 
@@ -96,10 +96,13 @@ if __name__ == "__main__":
     compile_config(sys.argv[2], sys.argv[3], sys.argv[4])
   elif sys.argv[1] == "align":
     align(sys.argv[2:])
-  elif sys.argv[1] == "report" and len(sys.argv) >= 5 and len(sys.argv) <= 6:
+  elif sys.argv[1] == "report" and len(sys.argv) == 5:
+    (methods, values) = parse_filter_config(sys.argv[2])
+    report(methods, values, sys.argv[3], sys.argv[4])
+  elif sys.argv[1] == "filter" and len(sys.argv) >= 5 and len(sys.argv) <= 6:
     if len(sys.argv) == 5:
-      report(sys.argv[2], None, sys.argv[3], sys.argv[4])
+      report([sys.argv[2]], [None], sys.argv[3], sys.argv[4])
     else:
-      report(sys.argv[2], sys.argv[3], sys.argv[4], sys.argv[5])
+      report([sys.argv[2]], [int(sys.argv[3])], sys.argv[4], sys.argv[5])
   else:
     print_usage_and_exit()
