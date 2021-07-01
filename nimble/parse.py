@@ -109,7 +109,7 @@ def parse_alignment_results(input_path):
       str_rep += csv_line + "\n"
       curr_line_len = len(csv_line.split(","))
 
-      if(curr_line_len > max_line_len):
+      if curr_line_len > max_line_len:
         max_line_len = curr_line_len
 
       metadata.append(line.split("\t")[1:])

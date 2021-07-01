@@ -22,7 +22,7 @@ def _min_pct(data, pct):
   for reference in references:
     num_reads = data[data.apply(lambda row: reference in row.values, axis=1)][0].sum()
 
-    if (num_reads / num_reads_total < pct):
+    if num_reads / num_reads_total < pct:
       references_to_drop.append(reference)
 
   for reference in references_to_drop:
@@ -42,7 +42,7 @@ def _min_count(data, count):
   for reference in references:
     num_reads = data[data.apply(lambda row: reference in row.values, axis=1)][0].sum()
 
-    if (num_reads < count):
+    if num_reads < count:
       references_to_drop.append(reference)
 
   for reference in references_to_drop:
