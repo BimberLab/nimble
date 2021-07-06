@@ -26,5 +26,5 @@ class Config():
 # Type to contain the actual sequence data/metadata. Can be arbitrarily modified at runtime to contain any metadata.
 class Data():
   def __init__(self):
-    self.headers = ["reference_genome", "sequence_name", "nt_length", "sequence"]
-    self.columns = [[], [], [], []]
+    self.headers = ["reference_genome", "sequence_name", "nt_length"]
+    self.columns = [[], [], []]
