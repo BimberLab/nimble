@@ -1,7 +1,6 @@
 import json
 
 import pandas as pd
-import pysam
 
 from Bio import SeqIO
 from io import StringIO
