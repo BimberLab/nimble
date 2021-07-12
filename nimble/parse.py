@@ -28,6 +28,7 @@ def parse_fasta(seq_path):
       data.columns[1].append("null")
 
     data.columns[2].append(str(len(record)))
+    data.columns[3].append(str(record.seq))
 
   return (data, config)
 
@@ -68,6 +69,8 @@ def parse_bam(seq_path):
     except KeyError:
       pass
 
+    seq = read.query_sequence
+
     data.columns[0].append(library_name)
 
     if read.reference_name is not None:
@@ -75,16 +78,17 @@ def parse_bam(seq_path):
     else:
       data.columns[1].append("null")
 
-    data.columns[2].append(str(len(read.query_sequence)))
+    data.columns[2].append(str(len(seq)))
+    data.columns[3].append(seq)
 
     if is_single_cell:
       if cell_barcode is not None:
-        data.columns[3].append(cell_barcode)
+        data.columns[4].append(cell_barcode)
       else:
-        data.columns[3].append("null")
+        data.columns[4].append("null")
 
       if molecular_barcode is not None:
-        data.columns[4].append(molecular_barcode)
+        data.columns[5].append(molecular_barcode)
       else:
         data.columns[4].append("null")
 
