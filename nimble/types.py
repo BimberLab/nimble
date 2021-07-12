@@ -3,10 +3,8 @@ from enum import Enum
 
 # Enum that specifies what type of data is in the output reference library
 class DataType(str, Enum):
-  FASTA = "fasta"
-  BAM = "bam"
-  SINGLECELL = "single-cell"
-  
+  FASTA = "RNA"
+
 
 # Alignment config to be serialized and passed to the backend aligner
 class Config():
@@ -19,7 +17,7 @@ class Config():
     self.group_on = ""
     self.discard_multi_hits = 0
     self.require_valid_pair = False
-    self.data_type = DataType.BAM
+    self.data_type = DataType.FASTA
     self.filters = []
 
 

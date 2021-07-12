@@ -33,69 +33,6 @@ def parse_fasta(seq_path):
   return (data, config)
 
 
-# Given a path to a .bam, reads it and returns a (Data, Config) tuple with filled objects
-def parse_bam(seq_path):
-  data = Data()
-  config = Config()
-  config.data_type = DataType.BAM
-
-  is_single_cell = False
-
-  library_name = get_library_name_from_filename(seq_path)
-
-  f = pysam.AlignmentFile(seq_path, "rb")
-
-  for index, read in enumerate(f):
-    cell_barcode = None
-    molecular_barcode = None
-
-    # Detect if any of these reads are 10x data. If they are, add the relevant columns and metadata
-    try:
-      cell_barcode = read.get_tag("CR")
-      molecular_barcode = read.get_tag("UR")
-
-      # Add empty CellBarcode and UMI
-      if not is_single_cell:
-        data.headers.extend(["cell_barcode", "molecular_barcode"])
-        data.columns.extend([[], []])
-
-        # Fill columns up to this read with None
-        for _ in range(0, index):
-          data.columns[4].append("null")
-          data.columns[5].append("null")
-
-        is_single_cell = True
-        config.data_type = DataType.SINGLECELL
-    except KeyError:
-      pass
-
-    seq = read.query_sequence
-
-    data.columns[0].append(library_name)
-
-    if read.reference_name is not None:
-      data.columns[1].append(read.reference_name)
-    else:
-      data.columns[1].append("null")
-
-    data.columns[2].append(str(len(seq)))
-    data.columns[3].append(seq)
-
-    if is_single_cell:
-      if cell_barcode is not None:
-        data.columns[4].append(cell_barcode)
-      else:
-        data.columns[4].append("null")
-
-      if molecular_barcode is not None:
-        data.columns[5].append(molecular_barcode)
-      else:
-        data.columns[4].append("null")
-
-
-  return (data, config)
-
-
 # Read data from the backend aligner's output format -- a TSV
 def parse_alignment_results(input_path):
   with open(input_path, "r") as f:

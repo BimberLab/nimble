@@ -28,7 +28,7 @@ def get_exec_name_from_platform():
   elif sys.platform == "darwin":
     exec_name = "Mac.app"
   else:
-    print("Error -- platform " + sys.platform + " does not have a compatible release on GitHub.")
+    print("Error -- platform " + sys.platform + " does not have a compatible release on GitHub. Please open an issue at https://github.com/BimberLab/nimble.")
     sys.exit()
 
   return exec_name
