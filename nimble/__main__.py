@@ -11,7 +11,7 @@ import zipfile
 from sys import platform
 
 from nimble.types import Config
-from nimble.parse import parse_fasta, parse_bam, parse_filter_config 
+from nimble.parse import parse_fasta, parse_filter_config 
 from nimble.usage import print_usage_and_exit
 from nimble.utils import get_exec_name_from_platform
 from nimble.reporting import report
@@ -33,10 +33,7 @@ def create_editable_config(seq_path, reference_output_path, config_output_path):
   data = None
   config = None
 
-  if file_ext == ".fasta":
-    (data, config) = parse_fasta(seq_path)
-  elif file_ext == ".bam":
-    (data, config) = parse_bam(seq_path)
+  (data, config) = parse_fasta(seq_path)
 
   # Write reference and default config to disk
   with open(reference_output_path, "w") as f:
