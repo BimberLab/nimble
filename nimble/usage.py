@@ -23,5 +23,5 @@ usage:
 
 
 def print_usage_and_exit():
-  print(USAGE_STRING)
-  sys.exit()
+    print(USAGE_STRING)
+    sys.exit()
