@@ -4,8 +4,8 @@ FROM ubuntu:21.10
 ENV DEBIAN_FRONTEND=noninteractive
 
 #samtools' dependencies
-RUN apt-get update \
-		&& apt-get install libncurses5-dev zlib1g-dev libbz2-dev liblzma-dev python3-pip \
+RUN apt-get update -y \
+		&& apt-get install -y libncurses5-dev zlib1g-dev libbz2-dev liblzma-dev python3-pip wget \
 		&& apt-get clean
 
 #samtools
@@ -23,6 +23,6 @@ ADD . /nimble
 RUN pip install ./nimble
 
 # Download the latest aligner version
-RUN python -m nimble download
+RUN python3 -m nimble download
 
-CMD ["python", "-m", "nimble"]
+ENTRYPOINT ["python3", "-m", "nimble"]
