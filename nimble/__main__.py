@@ -13,6 +13,7 @@ from sys import platform
 
 from nimble.types import Config
 from nimble.parse import parse_fasta, parse_filter_config
+from nimble.remote import get_remote_lib
 from nimble.usage import print_usage_and_exit
 from nimble.utils import get_exec_name_from_platform
 from nimble.reporting import report
@@ -32,13 +33,25 @@ def compile_config(reference_output_path, config_output_path, compiled_json_path
 
 # Generate and write human-editable config json files to disk
 def create_editable_config(seq_path, reference_output_path, config_output_path):
-    # Determine if we're working with .fasta or a zipped .bam
-    file_ext = os.path.splitext(seq_path)[1]
-
     data = None
     config = None
 
     (data, config) = parse_fasta(seq_path)
+
+    # Write reference and default config to disk
+    with open(reference_output_path, "w") as f:
+        json.dump(data.__dict__, f, indent=2)
+
+    with open(config_output_path, "w") as f:
+        json.dump(config.__dict__, f, indent=2)
+
+
+# Generate and write human-editable config json files to disk
+def create_editable_config_remote(remote_seq_path, reference_output_path, config_output_path):
+    data = None
+    config = None
+
+    (data, config) = get_remote_lib(remote_seq_path)
 
     # Write reference and default config to disk
     with open(reference_output_path, "w") as f:
@@ -89,14 +102,20 @@ def align(param_list):
     path = os.path.join(os.path.dirname(os.path.realpath(__file__)), "aligner")
     input_ext = os.path.splitext(param_list[2])[-1].lower()
 
+    cores = "1"
+    if "-c" in param_list:
+        cores = param_list[param_list.index("-c") + 1]
+    elif "--cores" in param_list:
+        cores = param_list[param_list.index("--cores") + 1]
+
     if os.path.exists(path):
         if input_ext == ".bam":
-            sort_input_bam(param_list[2])
+            sort_input_bam(param_list[2], cores)
         print("Aligning input .bam to the reference library")
         subprocess.call([path] + param_list)
     else:
         print("No aligner found. Attempting to download the latest release.\n")
-        download_aligner([])
+        download_aligner([],)
 
         align_tries += 1
         if align_tries >= align_threshold:
@@ -106,9 +125,14 @@ def align(param_list):
         align(param_list)
 
 
-def sort_input_bam(bam):
+def sort_input_bam(bam, cores):
     print("Sorting input .bam")
-    pysam.sort('-t', 'UR', '-n', '-o', bam, '-@', '8', bam)
+    tmp_dir = os.environ.get("TMPDIR")
+
+    if tmp_dir:
+        pysam.sort('-t', 'UR', '-n', '-o', bam, '-@', cores, bam, '-T', tmp_dir)
+    else:
+        pysam.sort('-t', 'UR', '-n', '-o', bam, '-@', cores, bam)
 
 
 if __name__ == "__main__":
@@ -118,6 +142,8 @@ if __name__ == "__main__":
         download_aligner(sys.argv[2:])
     elif sys.argv[1] == "generate" and len(sys.argv) == 5:
         create_editable_config(sys.argv[2], sys.argv[3], sys.argv[4])
+    elif sys.argv[1] == "remote-generate" and len(sys.argv) == 5:
+        create_editable_config_remote(sys.argv[2], sys.argv[3], sys.argv[4])
     elif sys.argv[1] == "compile" and len(sys.argv) == 5:
         compile_config(sys.argv[2], sys.argv[3], sys.argv[4])
     elif sys.argv[1] == "align":
