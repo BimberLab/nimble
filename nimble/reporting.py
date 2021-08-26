@@ -1,104 +1,79 @@
-from io import StringIO
 import pandas as pd
 import numpy as np
 
-def load_data(input_path):
-  with open(input_path, "r") as f:
-    metadata = [next(f)]
-
-    str_rep = ""
-    max_line_len = 0
-
-    for line in f:
-      csv_line = line.split("\t")[1].strip() + "," + line.split("\t")[0] + "\n"
-      str_rep += csv_line + "\n"
-      curr_line_len = len(csv_line.split(","))
-
-      if(curr_line_len > max_line_len):
-        max_line_len = curr_line_len
-
-      metadata.append(line.split("\t")[1:])
-
-  names = [i for i in range(0, max_line_len)]
-  return (pd.read_csv(StringIO(str_rep), header=None, names=names), metadata)
+from nimble.parse import parse_alignment_results
+from nimble.utils import write_data_to_tsv
 
 
-def write_data(output_path, out_data, metadata):
-  out_data = out_data.drop(0, axis=1)
-
-  with open(output_path, "w") as f:
-    metadata = iter(metadata)
-    f.write(next(metadata))
-
-    for row in out_data.apply(lambda row: row.values[~pd.isna(row.values)], axis=1):
-      line_metadata = "\t".join([elem for elem in next(metadata)])
-      
-      if len(row) > 0:
-        f.write(",".join([reference for reference in row]) + "\t" + line_metadata)
+# Get the number of unique reference names in a readset
+def _get_unique_references(data):
+    return pd.unique(data[data.columns[1:]].values.ravel("K"))
 
 
-def get_unique_references(data):
-  return pd.unique(data[data.columns[1:]].values.ravel('K'))
+# Filter reads via a threshold on the minimum percentage of total reads
+def _min_pct(data, pct):
+    if pct == None:
+        pct = 0.01
+
+    num_reads_total = data[0].sum()
+    references = _get_unique_references(data)
+    references_to_drop = []
+
+    for reference in references:
+        num_reads = data[data.apply(lambda row: reference in row.values, axis=1)][
+            0
+        ].sum()
+
+        if num_reads / num_reads_total < pct:
+            references_to_drop.append(reference)
+
+    for reference in references_to_drop:
+        data = data.replace(reference, np.nan)
+
+    return data
 
 
-def min_pct(data, pct):
-  if pct == None:
-    pct = 0.01
+# Filter reads via a threshold on the minimum number of hits
+def _min_count(data, count):
+    if count == None:
+        count = 5
 
-  num_reads_total = data[0].sum()
-  references = get_unique_references(data)
-  references_to_drop = []
+    references = _get_unique_references(data)
+    references_to_drop = []
 
-  for reference in references:
-    num_reads = data[data.apply(lambda row: reference in row.values, axis=1)][0].sum()
+    for reference in references:
+        num_reads = data[data.apply(lambda row: reference in row.values, axis=1)][
+            0
+        ].sum()
 
-    if (num_reads / num_reads_total < pct):
-      references_to_drop.append(reference)
+        if num_reads < count:
+            references_to_drop.append(reference)
 
-  for reference in references_to_drop:
-    data = data.replace(reference, np.nan)
+    for reference in references_to_drop:
+        data = data.replace(reference, np.nan)
 
-  return data
-
-
-def min_count(data, count):
-  if count == None:
-    count = 5
-
-  references = get_unique_references(data)
-  references_to_drop = []
-
-  for reference in references:
-    num_reads = data[data.apply(lambda row: reference in row.values, axis=1)][0].sum()
-
-    if (num_reads < count):
-      references_to_drop.append(reference)
-
-  for reference in references_to_drop:
-    data = data.replace(reference, np.nan)
-
-  return data
+    return data
 
 
-def min_pct_lineage(data, value):
-  if pct == None:
-    pct = 0.01
+# Run the given method with the given value and return the data/metadata
+def _filter(data, metadata, method, value):
+    out_data = None
 
-  return ""
+    if method == "minPct":
+        out_data = _min_pct(data, value)
+    elif method == "minCount":
+        out_data = _min_count(data, value)
+    else:
+        raise ValueError("No such filter, " + method)
+
+    return (out_data, metadata)
 
 
-def report(method, value, results_path, output_path):
-  (data, metadata) = load_data(results_path)
+# API for this module. Can chain reports in an order provided by the methods list.
+def report(methods, values, results_path, output_path):
+    (data, metadata) = parse_alignment_results(results_path)
 
-  out_data = None
+    for (method, value) in zip(methods, values):
+        (data, metadata) = _filter(data, metadata, method, value)
 
-  if method == "minPct":
-    out_data = min_pct(data, value)
-  elif method == "minCount":
-    out_data = min_count(data, value)
-  elif method == "minPctLineage":
-    out_data = min_pct_lineage(data, value)
-  else:
-    print("Incorrect format. Please see 'nimble help'.")
-
-  write_data(output_path, out_data, metadata)
+    write_data_to_tsv(output_path, data, metadata)
