@@ -1,36 +1,22 @@
-import csv
+import os
 from Bio import Entrez
 
 from nimble.types import Data, Config, DataType
 from nimble.utils import get_library_name_from_filename
 
-def get_remote_lib(tsv_path):
-    Entrez.email = "benjamse@ohsu.edu"
 
-    data = Data()
-    config = Config()
-    config.data_type = DataType.FASTA
+Entrez.email = os.environ.get("NCBI_EMAIL")
+Entrez.api_key = os.environ.get("NCBI_API_KEY")
 
-    terms = []
-    ids = []
 
-    reference_genome = get_library_name_from_filename(tsv_path)
-    reference_genomes = []
-    sequence_names = []
-    nt_lengths = []
-    sequences = []
+def fetch_sequence(ids, string_id, subset):
+    if len(ids) > 1:
+        print("Error -- attempt to fetch sequence with multiple ids: " + string_id)
+        sys.exit()
 
-    with open(tsv_path) as f:
-        reader = csv.reader(f, delimiter="\t", quotechar='"')
-
-        next(reader)
-
-        for row in reader:
-            sequence_names.append(row[0])
-            terms.append(row[1])
-
-    for term in terms:
-        ids += get_ids(term)
+    if len(ids) == 0:
+        print("Error -- attempt to fetch sequence with no ids: " + string_id)
+        sys.exit()
 
     handle = Entrez.efetch(db="nucleotide", id=ids, retmode="text", rettype="fasta")
     record = handle.read()
@@ -38,22 +24,21 @@ def get_remote_lib(tsv_path):
     lines = iter(record.splitlines())
     next(lines)
 
-    curr_seq = ""
+    seq = ""
 
     for line in lines:
         if line and line[0] == ">":
             reference_genomes.append(reference_genome)
-            nt_lengths.append(str(len(curr_seq)))
-            sequences.append(curr_seq)
-            curr_seq = ""
+            nt_lengths.append(str(len(seq)))
+            sequences.append(seq)
+            seq = ""
         else:
-            curr_seq += line
+            seq += line
 
-    nt_lengths.append(str(len(curr_seq)))
-    sequences.append(curr_seq)
-
-    data.columns = [reference_genomes, sequence_names, nt_lengths, sequences]
-    return (data, config)
+    if subset:
+        subset = subset.split("-")
+        seq = seq[int(subset[0]):int(subset[1])]
+    return (len(seq), seq)
 
 
 def get_ids(term):
