@@ -98,7 +98,8 @@ def parse_csv(csv_path, has_sequences=True):
         if has_sequences and names_idx < sequence_idx:
             sequence_idx -= 1
 
-        headers.pop(sequence_idx)
+        if has_sequences:
+            headers.pop(sequence_idx)
 
         for row in reader:
             sequence_names.append(row.pop(names_idx))
