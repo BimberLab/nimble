@@ -23,19 +23,69 @@ align_tries_threshold = 0
 
 
 # Generate and write human-editable config json files to disk
-def generate(file, output_path):
-    #TODO process FASTA + CSV
-    data = None
-    config = None
+def generate(file, opt_file, output_path):
+    (data, config, is_csv_req) = process_file(file, opt_file)
+    (data_opt, config_opt, is_csv_opt) = process_file(opt_file, file)
 
-    if pathlib.Path(file).suffix == ".fasta":
-        (data, config) = parse_fasta(file)
-    elif pathlib.Path(file).suffix == ".csv":
-        (data, config) = parse_csv(file)
+    final_config = config
+    if data_opt != None and is_csv_opt:
+        final_config = config_opt
+
+    final_data = None
+    if data_opt != None:
+        if is_csv_req:
+            final_data = collate_data(data_opt, data)
+        elif is_csv_opt:
+            final_data = collate_data(data, data_opt)
+    else:
+        final_data = data
 
     # Write reference and default config to disk
     with open(output_path, "w") as f:
-        json.dump([ config.__dict__, data.__dict__], f, indent=2)
+        json.dump([ final_config.__dict__, final_data.__dict__], f, indent=2)
+
+
+def process_file(file, paired_file):
+    data = None
+    config = None
+    is_csv = False
+
+    if file:
+        if pathlib.Path(file).suffix == ".fasta":
+            (data, config) = parse_fasta(file)
+        elif pathlib.Path(file).suffix == ".csv" and paired_file:
+            (data, config) = parse_csv(file, False)
+            is_csv = True
+        elif pathlib.Path(file).suffix == ".csv" and not paired_file:
+            (data, config) = parse_csv(file, True)
+            is_csv = True
+
+    return (data, config, is_csv)
+
+
+def collate_data(data, metadata):
+    name_idx = data.headers.index("sequence_name")
+    sequence_idx = data.headers.index("sequence")
+    nt_length_idx = data.headers.index("nt_length")
+
+    meta_name_idx = metadata.headers.index("sequence_name")
+    meta_sequence_idx = metadata.headers.index("sequence")
+    meta_nt_length_idx = metadata.headers.index("nt_length")
+
+    metadata.columns[meta_sequence_idx] = ["" for _ in range(0, len(data.columns[sequence_idx]))]
+    metadata.columns[meta_nt_length_idx] = ["" for _ in range(0, len(data.columns[nt_length_idx]))]
+
+    for (from_idx, name) in enumerate(data.columns[name_idx]):
+        if name not in metadata.columns[meta_name_idx]:
+            print("Error -- record " + name + " is not found in both input files.")
+            sys.exit()
+
+        update_idx = metadata.columns[meta_name_idx].index(name)
+
+        metadata.columns[meta_sequence_idx][update_idx] = data.columns[sequence_idx][from_idx]
+        metadata.columns[meta_nt_length_idx][update_idx] = data.columns[nt_length_idx][from_idx]
+
+    return metadata
 
 
 # Given the name of a release, download the platform-specific executable from that release.
@@ -117,8 +167,11 @@ if __name__ == "__main__":
         print_usage_and_exit()
     elif sys.argv[1] == "download" and len(sys.argv) <= 3:
         download(sys.argv[2:])
-    elif sys.argv[1] == "generate" and len(sys.argv) == 4:
-        generate(sys.argv[2], sys.argv[3])
+    elif sys.argv[1] == "generate" and len(sys.argv) >= 4 and len(sys.argv) <= 5:
+        if len(sys.argv) == 4:
+            generate(sys.argv[2], None, sys.argv[3])
+        else:
+            generate(sys.argv[2], sys.argv[3], sys.argv[4])
     elif sys.argv[1] == "align":
         align(sys.argv[2:])
     elif sys.argv[1] == "report" and len(sys.argv) == 5:
