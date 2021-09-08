@@ -1,5 +1,5 @@
 # nimble
-nimble is a fast, accurate, and configurable bulk RNA sequence aligner that executes lightweight alignments on arbitrary reference libraries. It uses pseudo-alignment to rapidly generate supplemental calls to complement a data pipeline's primary alignment. It does this with low overhead, making it possible to run supplemental alignments on almost any machine.
+nimble is a fast, accurate, and configurable RNA sequence aligner that executes lightweight alignments on arbitrary reference libraries. It uses pseudo-alignment to rapidly generate supplemental calls to complement a data pipeline's primary alignment. It does this with low overhead, making it possible to run supplemental alignments on almost any machine.
 
 
 # Installation
