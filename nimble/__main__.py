@@ -1,6 +1,8 @@
 #!/usr/bin/env python
 import sys
 import os
+os.environ['OPENBLAS_NUM_THREADS'] = '1'
+
 import argparse
 import subprocess
 import requests
