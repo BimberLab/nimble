@@ -1,10 +1,10 @@
 # nimble
-nimble is a fast, accurate, and configurable bulk RNA sequence aligner that executes lightweight alignments on arbitrary reference libraries. It uses pseudo-alignment to rapidly generate supplemental calls to complement a data pipeline's primary alignment. It does this with low overhead, making it possible to run supplemental alignments on any machine.
+nimble is a fast, accurate, and configurable bulk RNA sequence aligner that executes lightweight alignments on arbitrary reference libraries. It uses pseudo-alignment to rapidly generate supplemental calls to complement a data pipeline's primary alignment. It does this with low overhead, making it possible to run supplemental alignments on almost any machine.
 
 
 # Installation
 
-nimble's only dependency is Python 3. It supports the following operating systems:
+nimble requires Python 3 and [samtools](http://www.htslib.org/). It supports the following operating systems:
 
 - Windows
 - MacOS
@@ -16,10 +16,14 @@ To install nimble, run the following command:
 
 `pip install git+https://github.com/BimberLab/nimble`
 
+There is also a [docker image](https://github.com/BimberLab/nimble/pkgs/container/nimble).
+
 
 # Usage
 
-For usage examples, refer to the [quickstart guide](https://github.com/BimberLab/nimble/wiki/Quickstart).
+For usage documentation, refer to the [quickstart guide](https://github.com/BimberLab/nimble/wiki/Quickstart).
+
+There are also [usage examples](https://github.com/BimberLab/nimble/wiki/Example-Data-Analysis).
 
 
 # Documentation
@@ -32,7 +36,7 @@ The source code for the backend aligner can be found [here](https://github.com/B
 
 # Issues
 
-To report a bug, ask a question, or request support for a new operating system, please create an issue in this repository.
+To report a bug, ask a question, or request support for a new operating system, please create an [issue](https://github.com/BimberLab/nimble/issues) in this repository.
 
 
 # References
