@@ -20,9 +20,9 @@ RUN cd /tmp \
 
 # Install nimble
 ADD . /nimble
-RUN pip install ./nimble
+RUN ["pip", "install", "./nimble"]
 
 # Download the latest aligner version
-RUN python3 -m nimble download
+RUN ["python3", "-m", "nimble", "download"]
 
 ENTRYPOINT ["python3", "-m", "nimble"]
