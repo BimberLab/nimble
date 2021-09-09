@@ -1,22 +1,19 @@
-FROM ubuntu:21.10
+FROM archlinux:base-devel
 
-# See: https://stackoverflow.com/questions/44331836/apt-get-install-tzdata-noninteractive
-ENV DEBIAN_FRONTEND=noninteractive
+# Update Arch
+RUN pacman -Syu --noconfirm
 
-#samtools' dependencies
-RUN apt-get update -y \
-		&& apt-get install -y libncurses5-dev zlib1g-dev libbz2-dev liblzma-dev python3-pip wget \
-		&& apt-get clean
+# Install Git, sudo, python3, and pip
+RUN pacman -S git sudo python python-pip --noconfirm
 
-#samtools
-RUN cd /tmp \
-		&& wget https://github.com/samtools/samtools/releases/download/1.13/samtools-1.13.tar.bz2 \
-		&& tar xvjf samtools-1.13.tar.bz2 \
-		&& rm samtools-1.13.tar.bz2 \
-		&& cd samtools-1.13 \
-		&& ./configure --prefix=/usr/local \
-		&& make \
-		&& make install
+# Securely install yay using Git and makepkg on a separate user
+RUN useradd builduser -m &&\
+		passwd -d builduser &&\
+		printf 'builduser ALL=(ALL) ALL\n' | tee -a /etc/sudoers &&\
+		sudo -u builduser bash -c 'cd ~ && git clone https://aur.archlinux.org/yay.git && cd yay && makepkg -si --noconfirm'
+
+# Install samtools
+RUN sudo -u builduser yay -S samtools --noconfirm
 
 # Install nimble
 ADD . /nimble
