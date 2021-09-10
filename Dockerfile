@@ -1,23 +1,29 @@
-FROM archlinux:base-devel
+FROM centos:7
 
-# Update Arch
-RUN pacman -Syu --noconfirm
+# Update mirrors
+RUN yum update -y
 
-# Install Git, sudo, python3, and pip
-RUN pacman -S git sudo python python-pip --noconfirm
+# Set proper encoding for pip 20.2+
+ENV LANG en_US.utf8
+ENV LC_ALL en_US.utf8
 
-# Securely install yay using Git and makepkg on a separate user
-RUN useradd builduser -m &&\
-		passwd -d builduser &&\
-		printf 'builduser ALL=(ALL) ALL\n' | tee -a /etc/sudoers &&\
-		sudo -u builduser bash -c 'cd ~ && git clone https://aur.archlinux.org/yay.git && cd yay && makepkg -si --noconfirm'
+# Install python3, pip, and dependencies
+RUN yum group install -y "Development Tools"
+RUN yum install -y ncurses-devel bzip2-devel xz-devel zlib-devel wget
+RUN yum install -y python3 python-pip
 
 # Install samtools
-RUN sudo -u builduser yay -S samtools --noconfirm
+RUN cd /tmp &&\
+		wget https://github.com/samtools/samtools/releases/download/1.13/samtools-1.13.tar.bz2 &&\
+		tar xvjf samtools-1.13.tar.bz2 &&\
+		cd samtools-1.13 &&\
+		./configure --prefix=/usr/local &&\
+		make &&\
+		make install
 
 # Install nimble
 ADD . /nimble
-RUN ["pip", "install", "./nimble"]
+RUN ["pip3", "install", "./nimble"]
 
 # Download the latest aligner version
 RUN ["python3", "-m", "nimble", "download"]
