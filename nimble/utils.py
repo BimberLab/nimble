@@ -13,6 +13,7 @@ def get_library_name_from_filename(seq_path):
 
 # Get the name of a Github release given the target platform
 def get_exec_name_from_platform():
+    return "CentOS.out"
     exec_name = ""
 
     if sys.platform == "win32":

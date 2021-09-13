@@ -94,6 +94,7 @@ def collate_data(data, metadata):
 # Given no name, default to the most recent release.
 def download(release):
     exec_name = get_exec_name_from_platform()
+    print("Downloading " + exec_name)
 
     url = ""
     if len(release) == 1:
@@ -120,7 +121,7 @@ def download(release):
             f.write(r.content)
         if sys.platform == "linux" or sys.platform == "darwin":
             st = os.stat(aligner_path)
-            os.chmod(aligner_path, st.st_mode | stat.S_IEXEC)
+            os.chmod(aligner_path, st.st_mode | stat.S_IEXEC | stat.S_IXOTH)
     else:
         print("Error -- could not download aligner, status code " + str(r.status_code))
         sys.exit()
