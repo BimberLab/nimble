@@ -145,7 +145,7 @@ def align(param_list):
         subprocess.call([path] + param_list)
     else:
         print("No aligner found. Attempting to download the latest release.\n")
-        download_aligner([],)
+        download([])
 
         align_tries += 1
         if align_tries >= align_threshold:
