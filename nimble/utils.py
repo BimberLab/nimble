@@ -13,19 +13,12 @@ def get_library_name_from_filename(seq_path):
 
 # Get the name of a Github release given the target platform
 def get_exec_name_from_platform():
-    return "CentOS.out"
     exec_name = ""
 
     if sys.platform == "win32":
         exec_name = "windows.exe"
     elif sys.platform == "linux":
-        # Detect Centos7 vs other distros
-        if distro.id() == "centos":
-            exec_name = "CentOS.out"
-        elif distro.id() == "manjaro":
-            exec_name = "Manjaro.out"
-        else:
-            exec_name = "Ubuntu.out"
+        exec_name = "Linux.out"
     elif sys.platform == "darwin":
         exec_name = "Mac.app"
     else:
