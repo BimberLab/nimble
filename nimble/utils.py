@@ -20,7 +20,7 @@ def get_exec_name_from_platform():
     elif sys.platform == "linux":
         exec_name = "Linux.out"
     elif sys.platform == "darwin":
-        exec_name = "Mac.app"
+        exec_name = "MacOS.out"
     else:
         print(
             "Error -- platform "
