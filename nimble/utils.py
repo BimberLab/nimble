@@ -118,13 +118,9 @@ def trim_low_complexity_regions(seq):
 
     regions.append(current_region)
 
-    print(regions)
-
     # Concat all of the regions, skipping contiguous regions with length >= LOW_COMPLEXITY_REGION_LEN
     for region in regions:
         if len(region) < LOW_COMPLEXITY_REGION_LEN:
             new_seq += region
-        else:
-            print(region)
 
     return new_seq
