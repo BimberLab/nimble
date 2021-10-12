@@ -145,9 +145,10 @@ def align(param_list):
         subprocess.call([path] + param_list)
     else:
         print("No aligner found. Attempting to download the latest release.\n")
-        download_aligner([],)
+        download([])
 
-        ALIGN_TRIES += 1
+        global ALIGN_TRIES
+        ALIGN_TRIES = ALIGN_TRIES + 1
         if ALIGN_TRIES >= ALIGN_THRESHOLD:
             print("Error -- could not find or download aligner.")
             sys.exit()
