@@ -7,7 +7,7 @@ from Bio import SeqIO
 from io import StringIO
 
 from nimble.types import Data, Config, DataType
-from nimble.utils import get_library_name_from_filename
+from nimble.utils import get_library_name_from_filename, trim_low_complexity_regions
 from nimble.remote import fetch_sequence, get_ids
 
 
@@ -29,7 +29,7 @@ def parse_fasta(seq_path):
             data.columns[1].append("null")
 
         data.columns[2].append(str(len(record)))
-        data.columns[3].append(str(record.seq))
+        data.columns[3].append(trim_low_complexity_regions(str(record.seq)))
 
     return (data, config)
 
@@ -128,6 +128,6 @@ def parse_csv(csv_path, has_sequences=True):
                 metadata[i].append(col)
 
     data.headers.extend(headers)
-    data.columns = [reference_genomes, sequence_names, nt_lengths, sequences]
+    data.columns = [reference_genomes, sequence_names, nt_lengths, list(map(trim_low_complexity_regions, sequences))]
     data.columns.extend(metadata)
     return (data, config)
