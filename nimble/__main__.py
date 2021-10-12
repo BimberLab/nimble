@@ -20,8 +20,8 @@ from nimble.usage import print_usage_and_exit
 from nimble.utils import get_exec_name_from_platform
 from nimble.reporting import report
 
-align_tries = 10
-align_tries_threshold = 0
+ALIGN_TRIES = 10
+ALIGN_TRIES_THRESHOLD = 0
 
 
 # Generate and write human-editable config json files to disk
@@ -147,9 +147,9 @@ def align(param_list):
         print("No aligner found. Attempting to download the latest release.\n")
         download([])
 
-        global align_tries
-        align_tries = align_tries + 1
-        if align_tries >= align_threshold:
+        global ALIGN_TRIES
+        ALIGN_TRIES = ALIGN_TRIES + 1
+        if ALIGN_TRIES >= ALIGN_THRESHOLD:
             print("Error -- could not find or download aligner.")
             sys.exit()
 

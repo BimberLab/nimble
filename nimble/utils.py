@@ -6,6 +6,10 @@ import numpy as np
 from pathlib import Path
 
 
+# Derived from experimental data
+LOW_COMPLEXITY_REGION_LEN = 15
+
+
 # Generate reference genome name by getting the filename and prettifying it
 def get_library_name_from_filename(seq_path):
     return Path(seq_path).stem.replace("_", " ")
@@ -91,3 +95,32 @@ def write_data_to_tsv(output_path, out_data, metadata):
             str_rep += key + "\t" + value
 
         f.write(str_rep)
+
+def trim_low_complexity_regions(seq):
+    current_base = None
+    current_region = None
+    regions = []
+    new_seq = ""
+
+    # Partition the sequence into contiguous regions
+    for base in seq:
+        if current_base == None:
+            current_base = base
+            current_region = current_base
+            continue
+
+        if base != current_base:
+            regions.append(current_region)
+            current_base = base
+            current_region = current_base
+        else:
+            current_region += base
+
+    regions.append(current_region)
+
+    # Concat all of the regions, skipping contiguous regions with length >= LOW_COMPLEXITY_REGION_LEN
+    for region in regions:
+        if len(region) < LOW_COMPLEXITY_REGION_LEN:
+            new_seq += region
+
+    return new_seq
