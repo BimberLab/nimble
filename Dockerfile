@@ -9,7 +9,7 @@ ENV LC_ALL en_US.utf8
 
 # Install python3, pip, and dependencies
 RUN yum group install -y "Development Tools"
-RUN yum install -y ncurses-devel bzip2-devel xz-devel zlib-devel wget glibc-devel
+RUN yum install -y ncurses-devel bzip2-devel xz-devel zlib-devel wget glibc-devel python3-devel
 RUN yum install -y python3 python-pip
 
 # Install samtools
