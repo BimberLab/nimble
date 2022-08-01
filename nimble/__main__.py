@@ -141,6 +141,7 @@ def align(param_list):
     if os.path.exists(path):
         if input_ext == ".bam":
             sort_input_bam(param_list[2], cores)
+            param_list[2] = "sorted-" + param_list[2]
         print("Aligning input .bam to the reference library")
         subprocess.call([path] + param_list)
     else:
