@@ -161,9 +161,9 @@ def sort_input_bam(bam, cores):
     tmp_dir = os.environ.get("TMPDIR")
 
     if tmp_dir:
-        pysam.sort('-t', 'UR', '-n', '-o', bam, '-@', cores, bam, '-T', tmp_dir)
+        pysam.sort('-t', 'UR', '-n', '-o', "sorted-" + bam, '-@', cores, bam, '-T', tmp_dir)
     else:
-        pysam.sort('-t', 'UR', '-n', '-o', bam, '-@', cores, bam)
+        pysam.sort('-t', 'UR', '-n', '-o', "sorted-" + bam, '-@', cores, bam)
 
 
 if __name__ == "__main__":
