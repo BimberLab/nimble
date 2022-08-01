@@ -19,6 +19,7 @@ class Config:
         self.require_valid_pair = False
         self.data_type = DataType.FASTA
         self.filters = []
+        self.max_hits_to_report = 10
 
 
 # Type to contain the actual sequence data/metadata. Can be arbitrarily modified at runtime to contain any metadata.
@@ -26,3 +27,4 @@ class Data:
     def __init__(self):
         self.headers = ["reference_genome", "sequence_name", "nt_length", "sequence"]
         self.columns = [[], [], [], []]
+
