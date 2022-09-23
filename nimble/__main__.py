@@ -140,9 +140,12 @@ def align(param_list):
 
     if os.path.exists(path):
         if input_ext == ".bam":
+            print("Sorting input .bam")
+            sys.stdout.flush()
             sort_input_bam(param_list[2], cores)
             param_list[2] = "sorted-" + param_list[2]
         print("Aligning input .bam to the reference library")
+        sys.stdout.flush()
         subprocess.call([path] + param_list)
     else:
         print("No aligner found. Attempting to download the latest release.\n")
