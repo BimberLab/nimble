@@ -134,7 +134,6 @@ def align(param_list):
     param_list_noflags = []
     it = iter(param_list)
     for param in it:
-        print(param)
         if param[0] == "-":
             next(it, None)
         else:
