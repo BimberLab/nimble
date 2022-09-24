@@ -130,7 +130,17 @@ def download(release):
 # Check if the aligner exists -- if it does, call it with the given parameters.
 def align(param_list):
     path = os.path.join(os.path.dirname(os.path.realpath(__file__)), "aligner")
-    input_ext = os.path.splitext(param_list[2])[-1].lower()
+
+    param_list_noflags = []
+    it = iter(param_list)
+    for param in it:
+        print(param)
+        if param[0] == "-":
+            next(it, None)
+        else:
+            param_list_noflags.append(param)
+
+    input_ext = os.path.splitext(param_list_noflags[2])[-1].lower()
 
     cores = "1"
     if "-c" in param_list:
@@ -140,10 +150,9 @@ def align(param_list):
 
     if os.path.exists(path):
         if input_ext == ".bam":
-            print("Sorting input .bam")
-            sys.stdout.flush()
-            sort_input_bam(param_list[2], cores)
-            param_list[2] = "sorted-" + param_list[2]
+            sort_input_bam(param_list_noflags[2], cores)
+            param_list[param_list.index(param_list_noflags[2])] = "./sorted-" + param_list_noflags[2][2:]
+
         print("Aligning input .bam to the reference library")
         sys.stdout.flush()
         subprocess.call([path] + param_list)
@@ -162,12 +171,13 @@ def align(param_list):
 
 def sort_input_bam(bam, cores):
     print("Sorting input .bam")
+    sys.stdout.flush()
     tmp_dir = os.environ.get("TMPDIR")
 
     if tmp_dir:
-        pysam.sort('-t', 'UR', '-n', '-o', "sorted-" + bam, '-@', cores, bam, '-T', tmp_dir)
+        pysam.sort('-t', 'UR', '-n', '-o', "./sorted-" + bam[2:], '-@', cores, bam, '-T', tmp_dir)
     else:
-        pysam.sort('-t', 'UR', '-n', '-o', "sorted-" + bam, '-@', cores, bam)
+        pysam.sort('-t', 'UR', '-n', '-o', "./sorted-" + bam[2:], '-@', cores, bam)
 
 
 if __name__ == "__main__":
