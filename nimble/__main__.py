@@ -139,6 +139,7 @@ def align(param_list):
         else:
             param_list_noflags.append(param)
 
+    bam_param_idx = param_list.index(param_list_noflags[2])
     input_ext = os.path.splitext(param_list_noflags[2])[-1].lower()
 
     cores = "1"
@@ -149,12 +150,16 @@ def align(param_list):
 
     if os.path.exists(path):
         if input_ext == ".bam":
-            sort_input_bam(param_list_noflags[2], cores)
-            param_list[param_list.index(param_list_noflags[2])] = "./sorted-" + param_list_noflags[2][2:]
+            split = param_list_noflags[2].rsplit("/", 1)
+            sort_input_bam(split, cores)
+            param_list[bam_param_idx] = split[0] + "/sorted-" + split[1]
 
         print("Aligning input .bam to the reference library")
         sys.stdout.flush()
         subprocess.call([path] + param_list)
+
+        print("Deleting intermediate sorted .bam file")
+        os.remove(param_list[bam_param_idx])
     else:
         print("No aligner found. Attempting to download the latest release.\n")
         download([])
@@ -168,15 +173,18 @@ def align(param_list):
         align(param_list)
 
 
-def sort_input_bam(bam, cores):
+def sort_input_bam(file_tuple, cores):
     print("Sorting input .bam")
     sys.stdout.flush()
     tmp_dir = os.environ.get("TMPDIR")
 
+    bam = file_tuple[0] + "/" + file_tuple[1]
+    sorted_bam = file_tuple[0] + "/sorted-" + file_tuple[1]
+
     if tmp_dir:
-        pysam.sort('-t', 'UR', '-n', '-o', "./sorted-" + bam[2:], '-@', cores, bam, '-T', tmp_dir)
+        pysam.sort('-t', 'UR', '-n', '-o', sorted_bam, '-@', cores, bam, '-T', tmp_dir)
     else:
-        pysam.sort('-t', 'UR', '-n', '-o', "./sorted-" + bam[2:], '-@', cores, bam)
+        pysam.sort('-t', 'UR', '-n', '-o', sorted_bam, '-@', cores, bam)
 
 
 if __name__ == "__main__":
