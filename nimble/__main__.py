@@ -156,7 +156,7 @@ def align(param_list):
 
         print("Aligning input .bam to the reference library")
         sys.stdout.flush()
-        subprocess.call([path] + param_list)
+        p = subprocess.run([path].append(param_list), check=True)        
 
         if input_ext == ".bam":
             print("Deleting intermediate sorted .bam file")
