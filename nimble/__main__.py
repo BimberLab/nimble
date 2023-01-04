@@ -114,6 +114,7 @@ def download(release):
     r = requests.get(url)
 
     aligner_path = os.path.join(os.path.dirname(os.path.realpath(__file__)), "aligner")
+    print("Aligner download path: " + aligner_path)
 
     # If we successfully downloaded it, write the file to disk and give it execution permissions if necessary
     if r.status_code == 200:
@@ -156,10 +157,12 @@ def align(param_list):
 
         print("Aligning input .bam to the reference library")
         sys.stdout.flush()
-        subprocess.call([path] + param_list)
+        return_code = subprocess.call([path] + param_list)
 
         print("Deleting intermediate sorted .bam file")
         os.remove(param_list[bam_param_idx])
+
+        return return_code
     else:
         print("No aligner found. Attempting to download the latest release.\n")
         download([])
@@ -170,7 +173,7 @@ def align(param_list):
             print("Error -- could not find or download aligner.")
             sys.exit()
 
-        align(param_list)
+        return align(param_list)
 
 
 def sort_input_bam(file_tuple, cores):
@@ -198,7 +201,8 @@ if __name__ == "__main__":
         else:
             generate(sys.argv[2], sys.argv[3], sys.argv[4])
     elif sys.argv[1] == "align":
-        align(sys.argv[2:])
+        code = align(sys.argv[2:])
+        sys.exit(code)
     elif sys.argv[1] == "report" and len(sys.argv) == 5:
         (methods, values) = parse_filter_config(sys.argv[2])
         report(methods, values, sys.argv[3], sys.argv[4])
