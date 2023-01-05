@@ -190,6 +190,11 @@ def sort_input_bam(file_tuple, cores):
     else:
         pysam.sort('-t', 'UR', '-n', '-o', sorted_bam, '-@', cores, bam)
 
+    sort_log = pysam.sort.get_messages()
+
+    if (sort_log):
+        print("samtools error: " + sort_log)
+        sys.exit()
 
 if __name__ == "__main__":
     if len(sys.argv) == 1:  # Ensure we can index sys.argv[1]
