@@ -159,7 +159,7 @@ def align(param_list):
         sys.stdout.flush()
         return_code = subprocess.call([path] + param_list)
 
-        if input_ext == ".bam":
+        if input_ext == ".bam" and return_code == 0:
             print("Deleting intermediate sorted .bam file")
             os.remove(param_list[bam_param_idx])
 
