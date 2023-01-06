@@ -186,15 +186,14 @@ def sort_input_bam(file_tuple, cores):
     sorted_bam = file_tuple[0] + "/sorted-" + file_tuple[1]
 
     if tmp_dir:
-        pysam.sort('-t', 'UR', '-n', '-o', sorted_bam, '-@', cores, bam, '-T', tmp_dir)
+        pysam.sort('-t', 'UR', '-n', '-o', sorted_bam, '-@', cores, '-T', tmp_dir, bam)
     else:
         pysam.sort('-t', 'UR', '-n', '-o', sorted_bam, '-@', cores, bam)
 
     sort_log = pysam.sort.get_messages()
 
     if (sort_log):
-        print("samtools error: " + sort_log)
-        sys.exit()
+        print("samtools messages: " + sort_log)
 
 if __name__ == "__main__":
     if len(sys.argv) == 1:  # Ensure we can index sys.argv[1]
