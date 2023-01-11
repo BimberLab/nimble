@@ -17,14 +17,14 @@ from sys import platform
 from nimble.types import Config
 from nimble.parse import parse_fasta, parse_filter_config, parse_csv
 from nimble.usage import print_usage_and_exit
-from nimble.utils import get_exec_name_from_platform
+from nimble.utils import get_exec_name_from_platform, low_complexity_filter_amount
 from nimble.reporting import report
 
 ALIGN_TRIES = 10
 ALIGN_TRIES_THRESHOLD = 0
 
 
-# Generate and write human-editable config json files to disk
+# Generate and write human-editable config json files to disk. Input data is a CSV, FASTA, or both
 def generate(file, opt_file, output_path):
     (data, config, is_csv_req) = process_file(file, opt_file)
     (data_opt, config_opt, is_csv_opt) = process_file(opt_file, file)
@@ -42,11 +42,15 @@ def generate(file, opt_file, output_path):
     else:
         final_data = data
 
+    print("Filtered " + str(low_complexity_filter_amount) + " base pairs from reference library.")
+
     # Write reference and default config to disk
     with open(output_path, "w") as f:
         json.dump([ final_config.__dict__, final_data.__dict__], f, indent=2)
 
-
+# Parse a lone FASTA/lone CSV/CSV-FASTA tuple. If there's a lone FASTA, generate a simple library.
+# If there's a lone CSV, assume it has sequence information or a genbank link.
+# If there is not a lone CSV, assume it contains the metadata and that the sequence information is contained in the FASTA.
 def process_file(file, paired_file):
     data = None
     config = None
@@ -113,6 +117,7 @@ def download(release):
     # Download aligner
     r = requests.get(url)
 
+    # The executable will be placed in the python package directory
     aligner_path = os.path.join(os.path.dirname(os.path.realpath(__file__)), "aligner")
     print("Aligner download path: " + aligner_path)
 
@@ -120,7 +125,7 @@ def download(release):
     if r.status_code == 200:
         with open(aligner_path, "wb") as f:
             f.write(r.content)
-        if sys.platform == "linux" or sys.platform == "darwin":
+        if sys.platform == "linux" or sys.platform == "darwin": # If we're on a Unix, ensure permission to write
             st = os.stat(aligner_path)
             os.chmod(aligner_path, st.st_mode | stat.S_IEXEC | stat.S_IXOTH)
     else:
@@ -196,6 +201,7 @@ def sort_input_bam(file_tuple, cores):
         print("samtools messages: " + sort_log)
 
 if __name__ == "__main__":
+    # Note -- once this is all moved to flag-based parameters, most of this arg-parsing code can go away.
     if len(sys.argv) == 1:  # Ensure we can index sys.argv[1]
         print_usage_and_exit()
     elif sys.argv[1] == "download" and len(sys.argv) <= 3:

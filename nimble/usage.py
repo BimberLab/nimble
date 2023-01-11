@@ -12,11 +12,6 @@ usage:
 
   python -m nimble report <reference.json> <input.tsv> <output.tsv>
 
-  python -m nimble filter <method> <method parameters...> <input.tsv> <output.tsv>
-    Reporting methods:
-      minPct <OPTIONAL:pct, default=0.01>
-      minCount <OPTIONAL:count, default=5>
-
   python -m nimble help"""
 
 

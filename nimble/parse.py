@@ -29,6 +29,7 @@ def parse_fasta(seq_path):
             data.columns[1].append("null")
 
         data.columns[2].append(str(len(record)))
+
         data.columns[3].append(trim_low_complexity_regions(str(record.seq)))
 
     return (data, config)
@@ -71,6 +72,9 @@ def parse_filter_config(reference_path):
     return (methods, values)
 
 
+# Parse a CSV into nimble reference library format. If the CSV has_sequences, then the "sequences" column must
+# either contain sequence information or a genbank:// link. This function will copy all metadata columns into
+# the nimble library.
 def parse_csv(csv_path, has_sequences=True):
     data = Data()
     config = Config()
@@ -93,6 +97,7 @@ def parse_csv(csv_path, has_sequences=True):
             sequence_idx = headers.index("sequence")
         names_idx = headers.index("name")
 
+        # Headers are directly copied to the output library, so we remove headers we don't want to be included
         headers.pop(names_idx)
 
         if has_sequences and names_idx < sequence_idx:

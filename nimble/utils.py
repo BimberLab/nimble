@@ -6,8 +6,10 @@ import numpy as np
 from pathlib import Path
 
 
-# Derived from experimental data
+# This value was derived from seeing how much modification of the input reference lib is necessary
+# for nimble not to return massive counts due to matching high-entropy regions
 LOW_COMPLEXITY_REGION_LEN = 15
+low_complexity_filter_amount = 0
 
 
 # Generate reference genome name by getting the filename and prettifying it
@@ -20,7 +22,7 @@ def get_exec_name_from_platform():
     exec_name = ""
 
     if sys.platform == "win32":
-        exec_name = "windows.exe"
+        exec_name = "Windows.exe"
     elif sys.platform == "linux":
         exec_name = "Linux.out"
     elif sys.platform == "darwin":
@@ -96,31 +98,39 @@ def write_data_to_tsv(output_path, out_data, metadata):
 
         f.write(str_rep)
 
+# NOTE: This function was introduced in mid 2021. At the time, nimble would produce extremely high counts if there were
+# low complexity regions in the reference data, like poly-A tails. While we continue to proof nimble results after quite a bit
+# of development effort and QC work, for the time being this functionality is disabled to see if it is supressing useful nimble
+# counts
 def trim_low_complexity_regions(seq):
-    current_base = None
-    current_region = None
-    regions = []
-    new_seq = ""
+    #global low_complexity_filter_amount
+    #current_base = None
+    #current_region = None
+    #regions = []
+    #new_seq = ""
 
     # Partition the sequence into contiguous regions
-    for base in seq:
-        if current_base == None:
-            current_base = base
-            current_region = current_base
-            continue
+    #for base in seq:
+    #     if current_base == None:
+    #         current_base = base
+    #         current_region = current_base
+    #         continue
 
-        if base != current_base:
-            regions.append(current_region)
-            current_base = base
-            current_region = current_base
-        else:
-            current_region += base
+    #     if base != current_base:
+    #         regions.append(current_region)
+    #         current_base = base
+    #         current_region = current_base
+    #     else:
+    #         current_region += base
 
-    regions.append(current_region)
+    # regions.append(current_region)
 
     # Concat all of the regions, skipping contiguous regions with length >= LOW_COMPLEXITY_REGION_LEN
-    for region in regions:
-        if len(region) < LOW_COMPLEXITY_REGION_LEN:
-            new_seq += region
+    # for region in regions:
+    #     if len(region) < LOW_COMPLEXITY_REGION_LEN:
+    #         new_seq += region
+    #     else:
+    #       low_complexity_filter_amount += 1
 
-    return new_seq
+    #return new_seq
+    return seq
