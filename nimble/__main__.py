@@ -191,9 +191,9 @@ def sort_input_bam(file_tuple, cores):
     sorted_bam = file_tuple[0] + "/sorted-" + file_tuple[1]
 
     if tmp_dir:
-        pysam.sort('-t', 'UR', '-n', '-o', sorted_bam, '-@', cores, '-T', tmp_dir, bam)
+        pysam.sort('-t', 'UB', '-n', '-o', sorted_bam, '-@', cores, '-T', tmp_dir, bam)
     else:
-        pysam.sort('-t', 'UR', '-n', '-o', sorted_bam, '-@', cores, bam)
+        pysam.sort('-t', 'UB', '-n', '-o', sorted_bam, '-@', cores, bam)
 
     sort_log = pysam.sort.get_messages()
 
