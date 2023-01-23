@@ -13,20 +13,28 @@ jobs:
     if: github.ref == 'refs/heads/main'
     steps:
       - name: Checkout the repository
-        uses: actions/checkout@v2.5.0
+        uses: actions/checkout@v3
+        
       - name: Docker meta
         id: docker_meta
-        uses: crazy-max/ghaction-docker-meta@v4.1.1
+        uses: docker/metadata-action@v4
         with:
-          images: ghcr.io/bimberlab/nimble
-          tag-sha: true
+          images: ghcr.io/bimberlab/nimble        
           tag-semver: |
-            {{version}}
-            {{major}}.{{minor}}
+            type=semver,pattern={{version}}
+            type=semver,pattern={{major}}.{{minor}}
+            type=sha
+            
       - name: Set up QEMU
         uses: docker/setup-qemu-action@v2.1.0
+        
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v2.2.1
+        with:
+          # Use the previous version of buildx https://github.com/docker/buildx/releases
+          # to solve https://github.com/docker/build-push-action/issues/761
+          version: v0.9.1
+          
       - name: Login to GitHub Container Registry
         if: github.event_name != 'pull_request'
         uses: docker/login-action@v2.1.0
@@ -34,6 +42,7 @@ jobs:
           registry: ghcr.io
           username: ${{ github.actor }}
           password: ${{ secrets.PAT }}
+          
       - name: Build and push
         id: docker_build
         uses: docker/build-push-action@v3.2.0
