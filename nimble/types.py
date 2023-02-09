@@ -11,6 +11,7 @@ class Config:
     def __init__(self):
         self.score_threshold = 60
         self.score_filter = 25
+        self.score_percent = 0.5
         self.num_mismatches = 0
         self.discard_multiple_matches = False
         self.intersect_level = 0

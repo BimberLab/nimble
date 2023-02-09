@@ -1,4 +1,5 @@
 import sys
+import os
 import distro
 import pandas as pd
 import numpy as np
@@ -10,6 +11,27 @@ from pathlib import Path
 # for nimble not to return massive counts due to matching high-entropy regions
 LOW_COMPLEXITY_REGION_LEN = 15
 low_complexity_filter_amount = 0
+
+
+def append_path_string(input_path, pathAppendString):
+    # Extract the filename from the input path
+    filename = os.path.basename(input_path)
+
+    # Split the filename into the root and extension
+    root = filename
+    ext = ""
+    while True:
+        root, ext2 = os.path.splitext(root)
+        if ext2 == "":
+            break
+        ext = ext2 + ext
+
+    # Concatenate the root and the pathAppendString
+    new_filename = root + pathAppendString + ext
+
+    # Join the new filename with the path to form the full path
+    new_path = os.path.join(os.path.dirname(input_path), new_filename)
+    return new_path
 
 
 # Generate reference genome name by getting the filename and prettifying it

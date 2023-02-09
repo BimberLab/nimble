@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 import sys
 import os
-os.environ['OPENBLAS_NUM_THREADS'] = '1'
+#os.environ['OPENBLAS_NUM_THREADS'] = '1'
 
 import argparse
 import subprocess
@@ -17,7 +17,7 @@ from sys import platform
 from nimble.types import Config
 from nimble.parse import parse_fasta, parse_filter_config, parse_csv
 from nimble.usage import print_usage_and_exit
-from nimble.utils import get_exec_name_from_platform, low_complexity_filter_amount
+from nimble.utils import get_exec_name_from_platform, low_complexity_filter_amount, append_path_string
 from nimble.reporting import report
 
 ALIGN_TRIES = 10
@@ -26,6 +26,7 @@ ALIGN_TRIES_THRESHOLD = 0
 
 # Generate and write human-editable config json files to disk. Input data is a CSV, FASTA, or both
 def generate(file, opt_file, output_path):
+
     (data, config, is_csv_req) = process_file(file, opt_file)
     (data_opt, config_opt, is_csv_opt) = process_file(opt_file, file)
 
@@ -134,39 +135,50 @@ def download(release):
 
 
 # Check if the aligner exists -- if it does, call it with the given parameters.
-def align(param_list):
+def align(reference, output, input, alignment_path, log_path, num_cores, strand_filter):
     path = os.path.join(os.path.dirname(os.path.realpath(__file__)), "aligner")
-
-    param_list_noflags = []
-    it = iter(param_list)
-    for param in it:
-        if param[0] == "-":
-            next(it, None)
-        else:
-            param_list_noflags.append(param)
-
-    bam_param_idx = param_list.index(param_list_noflags[2])
-    input_ext = os.path.splitext(param_list_noflags[2])[-1].lower()
-
-    cores = "1"
-    if "-c" in param_list:
-        cores = param_list[param_list.index("-c") + 1]
-    elif "--cores" in param_list:
-        cores = param_list[param_list.index("--cores") + 1]
+    input_ext = os.path.splitext(input)[-1].lower()
 
     if os.path.exists(path):
         if input_ext == ".bam":
-            split = param_list_noflags[2].rsplit("/", 1)
-            sort_input_bam(split, cores)
-            param_list[bam_param_idx] = split[0] + "/sorted-" + split[1]
+            split = input.rsplit("/", 1)
+            sort_input_bam(split, num_cores)
+            input = split[0] + "/sorted-" + split[1]
 
-        print("Aligning input .bam to the reference library")
+        print("Aligning input .bam to the reference libraries")
         sys.stdout.flush()
-        return_code = subprocess.call([path] + param_list)
+
+        library_list = reference.split(",")
+
+        procs = []
+        for library in library_list:
+            out_file_append = ""
+
+            if len(library_list) > 1:
+                out_file_append = "." + os.path.splitext(os.path.basename(library))[0]
+
+            processed_param_list = [library, append_path_string(output, out_file_append), input, "--cores", str(num_cores), "--strand_filter", strand_filter]
+
+            if log_path:
+                processed_param_list.append("--log")
+                processed_param_list.append(append_path_string(log_path, out_file_append))
+
+            if alignment_path:
+                processed_param_list.append("--alignment")
+                processed_param_list.append(append_path_string(alignment_path, out_file_append))
+
+            procs.append(subprocess.Popen([path] + processed_param_list))
+
+        return_code = 0
+        for p in procs:
+            p.wait()
+
+            if p.returncode != 0:
+                return_code = 1
 
         if input_ext == ".bam" and return_code == 0:
             print("Deleting intermediate sorted .bam file")
-            os.remove(param_list[bam_param_idx])
+            os.remove(input)
 
         return return_code
     else:
@@ -179,7 +191,7 @@ def align(param_list):
             print("Error -- could not find or download aligner.")
             sys.exit()
 
-        return align(param_list)
+        return align(reference, output, input, alignment_path, log_path, num_cores, strand_filter)
 
 
 def sort_input_bam(file_tuple, cores):
@@ -187,13 +199,20 @@ def sort_input_bam(file_tuple, cores):
     sys.stdout.flush()
     tmp_dir = os.environ.get("TMPDIR")
 
-    bam = file_tuple[0] + "/" + file_tuple[1]
-    sorted_bam = file_tuple[0] + "/sorted-" + file_tuple[1]
+    bam = ""
+    sorted_bam = ""
+
+    if len(file_tuple) > 1:
+        bam = file_tuple[0] + "/" + file_tuple[1]
+        sorted_bam = file_tuple[0] + "/sorted-" + file_tuple[1]
+    else:
+        bam = file_tuple[0]
+        sorted_bam = "/sorted" + file_tuple[0]
 
     if tmp_dir:
-        pysam.sort('-t', 'UB', '-n', '-o', sorted_bam, '-@', cores, '-T', tmp_dir, bam)
+        pysam.sort('-t', 'UR', '-n', '-o', sorted_bam, '-@', str(cores), '-T', tmp_dir, bam)
     else:
-        pysam.sort('-t', 'UB', '-n', '-o', sorted_bam, '-@', cores, bam)
+        pysam.sort('-t', 'UR', '-n', '-o', sorted_bam, '-@', str(cores), bam)
 
     sort_log = pysam.sort.get_messages()
 
@@ -201,26 +220,31 @@ def sort_input_bam(file_tuple, cores):
         print("samtools messages: " + sort_log)
 
 if __name__ == "__main__":
-    # Note -- once this is all moved to flag-based parameters, most of this arg-parsing code can go away.
-    if len(sys.argv) == 1:  # Ensure we can index sys.argv[1]
-        print_usage_and_exit()
-    elif sys.argv[1] == "download" and len(sys.argv) <= 3:
-        download(sys.argv[2:])
-    elif sys.argv[1] == "generate" and len(sys.argv) >= 4 and len(sys.argv) <= 5:
-        if len(sys.argv) == 4:
-            generate(sys.argv[2], None, sys.argv[3])
-        else:
-            generate(sys.argv[2], sys.argv[3], sys.argv[4])
-    elif sys.argv[1] == "align":
-        code = align(sys.argv[2:])
-        sys.exit(code)
-    elif sys.argv[1] == "report" and len(sys.argv) == 5:
-        (methods, values) = parse_filter_config(sys.argv[2])
-        report(methods, values, sys.argv[3], sys.argv[4])
-    elif sys.argv[1] == "filter" and len(sys.argv) >= 5 and len(sys.argv) <= 6:
-        if len(sys.argv) == 5:
-            report([sys.argv[2]], [None], sys.argv[3], sys.argv[4])
-        else:
-            report([sys.argv[2]], [int(sys.argv[3])], sys.argv[4], sys.argv[5])
-    else:
-        print_usage_and_exit()
+    parser = argparse.ArgumentParser(description='Process some integers.')
+    subparsers = parser.add_subparsers(title='subcommands', dest='subcommand')
+
+    download_parser = subparsers.add_parser('download')
+    download_parser.add_argument('--release', help='The release to download.', type=str, default=None)
+
+    generate_parser = subparsers.add_parser('generate')
+    generate_parser.add_argument('--file', help='The file to process.', type=str, required=True)
+    generate_parser.add_argument('--opt_file', help='The optional file to process.', type=str, default=None)
+    generate_parser.add_argument('--output_path', help='The path to the output file.', type=str, required=True)
+
+    align_parser = subparsers.add_parser('align')
+    align_parser.add_argument('--reference', help='The reference genome to align to.', type=str, required=True)
+    align_parser.add_argument('--output', help='The path to the output file.', type=str, required=True)
+    align_parser.add_argument('--input', help='The input reads.', type=str, required=True)
+    align_parser.add_argument('--alignment_path', help='The path to the alignment file.', type=str, default=None)
+    align_parser.add_argument('--log_path', help='The path to the log file.', type=str, default=None)
+    align_parser.add_argument('--num_cores', help='The number of cores to use for alignment.', type=int, default=1)
+    align_parser.add_argument('--strand_filter', help='Filter reads based on strand information.', type=str, default=None)
+
+    args = parser.parse_args()
+
+    if args.subcommand == 'download':
+        download(args.release)
+    elif args.subcommand == 'generate':
+        generate(args.file, args.opt_file, args.output_path)
+    elif args.subcommand == 'align':
+        sys.exit(align(args.reference, args.output, args.input, args.alignment_path, args.log_path, args.num_cores, args.strand_filter))
