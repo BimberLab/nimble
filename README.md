@@ -27,8 +27,8 @@ nimble generate --file lib.csv --opt-file lib.fasta --output_path lib.json
 nimble align --reference lib.json,lib2.json,lib3.json --output out.tsv --input data.bam --alignment_path log.tsv.gz --log log.txt --num_cores 8 --strand_filter fiveprime
 ```
 
-A library is comprised on an input csv or fasta, or both.
-`nimble align` can take one or more libraries via the `--reference` flag in a CSV string. Every other file will be generated per-library, and the library name will be appended to the filename root. For instance, in this case, the `--output` files should be `out-lib.tsv`, `out-lib2.tsv`, and `out-lib3.tsv`.
+A library is comprised of an input csv or fasta, or both.
+`nimble align` can take one or more libraries via the `--reference` flag in a CSV string. Every other file will be generated per-library, and the library name will be appended to the filename root. For instance, in this case, the `--output` files will be `out-lib.tsv`, `out-lib2.tsv`, and `out-lib3.tsv`.
 
 # Documentation
 
