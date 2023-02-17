@@ -224,7 +224,7 @@ if __name__ == "__main__":
     subparsers = parser.add_subparsers(title='subcommands', dest='subcommand')
 
     download_parser = subparsers.add_parser('download')
-    download_parser.add_argument('--release', help='The release to download.', type=str, default=None)
+    download_parser.add_argument('--release', help='The release to download.', type=str, default=[])
 
     generate_parser = subparsers.add_parser('generate')
     generate_parser.add_argument('--file', help='The file to process.', type=str, required=True)
