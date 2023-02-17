@@ -237,7 +237,7 @@ if __name__ == "__main__":
     align_parser.add_argument('--input', help='The input reads.', type=str, required=True)
     align_parser.add_argument('--alignment_path', help='The path to the alignment file.', type=str, default=None)
     align_parser.add_argument('--log_path', help='The path to the log file.', type=str, default=None)
-    align_parser.add_argument('--num_cores', help='The number of cores to use for alignment.', type=int, default=1)
+    align_parser.add_argument('-c', '--num_cores', help='The number of cores to use for alignment.', type=int, default=1)
     align_parser.add_argument('--strand_filter', help='Filter reads based on strand information.', type=str, default=None)
 
     args = parser.parse_args()
