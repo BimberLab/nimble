@@ -228,7 +228,7 @@ if __name__ == "__main__":
 
     generate_parser = subparsers.add_parser('generate')
     generate_parser.add_argument('--file', help='The file to process.', type=str, required=True)
-    generate_parser.add_argument('--opt_file', help='The optional file to process.', type=str, default=None)
+    generate_parser.add_argument('--opt-file', help='The optional file to process.', type=str, default=None)
     generate_parser.add_argument('--output_path', help='The path to the output file.', type=str, required=True)
 
     align_parser = subparsers.add_parser('align')
