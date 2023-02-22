@@ -158,6 +158,7 @@ def align(reference, output, input, alignment_path, log_path, num_cores, strand_
                 out_file_append = "." + os.path.splitext(os.path.basename(library))[0]
 
             processed_param_list = [library, append_path_string(output, out_file_append), input, "--cores", str(num_cores), "--strand_filter", strand_filter]
+            print(processed_param_list)
 
             if log_path:
                 processed_param_list.append("--log")
@@ -207,7 +208,13 @@ def sort_input_bam(file_tuple, cores):
         sorted_bam = file_tuple[0] + "/sorted-" + file_tuple[1]
     else:
         bam = file_tuple[0]
-        sorted_bam = "/sorted" + file_tuple[0]
+        sorted_bam = "./sorted" + file_tuple[0]
+
+    print("Sorting " + bam + " Outputting to " + sorted_bam)
+
+    if os.path.isfile(sorted_bam):
+        print("Sorted bam file already exists, skipping the sorting step.")
+        return
 
     if tmp_dir:
         pysam.sort('-t', 'UR', '-n', '-o', sorted_bam, '-@', str(cores), '-T', tmp_dir, bam)
@@ -238,7 +245,7 @@ if __name__ == "__main__":
     align_parser.add_argument('--alignment_path', help='The path to the alignment file.', type=str, default=None)
     align_parser.add_argument('--log_path', help='The path to the log file.', type=str, default=None)
     align_parser.add_argument('-c', '--num_cores', help='The number of cores to use for alignment.', type=int, default=1)
-    align_parser.add_argument('--strand_filter', help='Filter reads based on strand information.', type=str, default=None)
+    align_parser.add_argument('--strand_filter', help='Filter reads based on strand information.', type=str, default="unstranded")
 
     args = parser.parse_args()
 
