@@ -197,7 +197,6 @@ def align(reference, output, input, alignment_path, log_path, num_cores, strand_
 
 def sort_input_bam(file_tuple, cores):
     print("Sorting input .bam")
-    sys.stdout.flush()
     tmp_dir = os.environ.get("TMPDIR")
 
     bam = ""
@@ -211,9 +210,11 @@ def sort_input_bam(file_tuple, cores):
         sorted_bam = "./sorted" + file_tuple[0]
 
     print("Sorting " + bam + " Outputting to " + sorted_bam)
+    sys.stdout.flush()
 
     if os.path.isfile(sorted_bam):
         print("Sorted bam file already exists, skipping the sorting step.")
+        sys.stdout.flush()
         return
 
     if tmp_dir:
