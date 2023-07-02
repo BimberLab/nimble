@@ -135,7 +135,7 @@ def download(release):
 
 
 # Check if the aligner exists -- if it does, call it with the given parameters.
-def align(reference, output, input, alignment_path, log_path, num_cores, strand_filter):
+def align(reference, output, input, _alignment_path, _log_path, num_cores, strand_filter):
     path = os.path.join(os.path.dirname(os.path.realpath(__file__)), "aligner")
     input_ext = os.path.splitext(input)[-1].lower()
 
@@ -145,37 +145,28 @@ def align(reference, output, input, alignment_path, log_path, num_cores, strand_
             sort_input_bam(split, num_cores)
             input = split[0] + "/sorted-" + split[1]
 
+
         print("Aligning input .bam to the reference libraries")
         sys.stdout.flush()
 
         library_list = reference.split(",")
 
-        procs = []
+        processed_param_list = ["--input", input, "-c", str(num_cores), "--strand_filter", strand_filter]
+
         for library in library_list:
             out_file_append = ""
 
             if len(library_list) > 1:
                 out_file_append = "." + os.path.splitext(os.path.basename(library))[0]
 
-            processed_param_list = [library, append_path_string(output, out_file_append), input, "--cores", str(num_cores), "--strand_filter", strand_filter]
-            print(processed_param_list)
+            processed_param_list.extend(["-r", library, "-o", append_path_string(output, out_file_append)])
+        print(processed_param_list)
 
-            if log_path:
-                processed_param_list.append("--log")
-                processed_param_list.append(append_path_string(log_path, out_file_append))
+        proc = subprocess.Popen([path] + processed_param_list)
+        proc.wait()
 
-            if alignment_path:
-                processed_param_list.append("--alignment")
-                processed_param_list.append(append_path_string(alignment_path, out_file_append))
-
-            procs.append(subprocess.Popen([path] + processed_param_list))
-
-        return_code = 0
-        for p in procs:
-            p.wait()
-
-            if p.returncode != 0:
-                return_code = 1
+        return_code = proc.returncode
+        sys.exit(1)
 
         if input_ext == ".bam" and return_code == 0:
             print("Deleting intermediate sorted .bam file")
