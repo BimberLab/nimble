@@ -11,6 +11,9 @@ import json
 import pathlib
 import zipfile
 import pysam
+import pandas as pd
+import numpy as np
+from collections import Counter
 
 from sys import platform
 
@@ -18,7 +21,6 @@ from nimble.types import Config
 from nimble.parse import parse_fasta, parse_filter_config, parse_csv
 from nimble.usage import print_usage_and_exit
 from nimble.utils import get_exec_name_from_platform, low_complexity_filter_amount, append_path_string
-from nimble.reporting import report
 
 ALIGN_TRIES = 10
 ALIGN_TRIES_THRESHOLD = 0
@@ -185,6 +187,41 @@ def align(reference, output, input, _alignment_path, _log_path, num_cores, stran
 
         return align(reference, output, input, alignment_path, log_path, num_cores, strand_filter)
 
+def report(input, output):
+    # Read input file
+    df = pd.read_csv(input, sep='\t', compression='gzip')
+
+    # Keep only necessary columns
+    df = df[['features', 'umi', 'cb']]
+
+    # Drop rows where 'features', 'umi', or 'cb' are null or empty
+    df = df.dropna(subset=['features', 'umi', 'cb'])
+    df = df[(df['features'] != '') & (df['umi'] != '') & (df['cb'] != '')]
+
+    # Split the feature strings into lists
+    df['features'] = df['features'].str.split(',')
+
+    # Group by cell barcode (CB) and UMI, aggregate features into a list
+    df_grouped = df.groupby(['cb', 'umi'])['features'].sum()
+
+    # Choose the most represented feature per UMI
+    df_grouped = df_grouped.apply(lambda x: Counter(x).most_common(1)[0][0])
+
+    # Convert Series back to DataFrame
+    df_grouped = df_grouped.reset_index()
+
+    # Rename columns
+    df_grouped.columns = ['cell_barcode', 'umi', 'feature']
+
+    # Count unique UMIs per cell_barcode-feature pair
+    df_counts = df_grouped.groupby(['cell_barcode', 'feature']).size().reset_index()
+
+    # Rename count column
+    df_counts.columns = ['cell_barcode', 'feature', 'count']
+
+    # Write to output file
+    df_counts.to_csv(output, sep='\t', index=False, compression='gzip')
+
 
 def sort_input_bam(file_tuple, cores):
     print("Sorting input .bam")
@@ -239,6 +276,10 @@ if __name__ == "__main__":
     align_parser.add_argument('-c', '--num_cores', help='The number of cores to use for alignment.', type=int, default=1)
     align_parser.add_argument('--strand_filter', help='Filter reads based on strand information.', type=str, default="unstranded")
 
+    report_parser = subparsers.add_parser('report')
+    report_parser.add_argument('-i', '--input', help='The input file.', type=str, required=True)
+    report_parser.add_argument('-o', '--output', help='The path to the output file.', type=str, required=True)
+
     args = parser.parse_args()
 
     if args.subcommand == 'download':
@@ -247,3 +288,5 @@ if __name__ == "__main__":
         generate(args.file, args.opt_file, args.output_path)
     elif args.subcommand == 'align':
         sys.exit(align(args.reference, args.output, args.input, args.alignment_path, args.log_path, args.num_cores, args.strand_filter))
+    elif args.subcommand == 'report':
+        report(args.input, args.output)
