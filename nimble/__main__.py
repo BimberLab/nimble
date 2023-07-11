@@ -195,6 +195,12 @@ def report(input, output):
     # Read input file
     df = pd.read_csv(input, sep='\t', compression='gzip')
 
+    if df.empty:
+        print('No data in input dataframe, writing empty output.')
+        empty_df = pd.DataFrame(columns=['feature', 'count', 'cell_barcode'])
+        empty_df.to_csv(output, sep='\t', index=False, compression='gzip', header=False)
+        return
+
     # Keep only necessary columns
     df = df[['features', 'umi', 'cb']]
 
