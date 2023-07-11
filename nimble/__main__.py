@@ -14,6 +14,7 @@ import pysam
 import pandas as pd
 import numpy as np
 from collections import Counter
+from functools import reduce
 
 from sys import platform
 
@@ -168,7 +169,6 @@ def align(reference, output, input, _alignment_path, _log_path, num_cores, stran
         proc.wait()
 
         return_code = proc.returncode
-        sys.exit(1)
 
         if input_ext == ".bam" and return_code == 0:
             print("Deleting intermediate sorted .bam file")
@@ -187,6 +187,10 @@ def align(reference, output, input, _alignment_path, _log_path, num_cores, stran
 
         return align(reference, output, input, alignment_path, log_path, num_cores, strand_filter)
 
+def intersect_lists(lists):
+    # Returns the intersection of all lists in a list
+    return list(reduce(set.intersection, map(set, lists)))
+
 def report(input, output):
     # Read input file
     df = pd.read_csv(input, sep='\t', compression='gzip')
@@ -202,13 +206,26 @@ def report(input, output):
     df['features'] = df['features'].str.split(',')
 
     # Group by cell barcode (CB) and UMI, aggregate features into a list
-    df_grouped = df.groupby(['cb', 'umi'])['features'].sum()
+    df_grouped = df.groupby(['cb', 'umi'])['features'].apply(list)
 
-    # Choose the most represented feature per UMI
-    df_grouped = df_grouped.apply(lambda x: Counter(x).most_common(1)[0][0])
+    # Calculate the intersection of features within each UMI
+    df_grouped = df_grouped.apply(intersect_lists)
 
-    # Convert Series back to DataFrame
+    # Convert back to a DataFrame
     df_grouped = df_grouped.reset_index()
+
+    # Identify rows where the intersection resulted in an empty list
+    empty_intersection_rows = df_grouped['features'].apply(lambda x: len(x) == 0)
+
+    # Count these rows and print the number
+    empty_intersection_count = empty_intersection_rows.sum()
+    print(f"Dropped {empty_intersection_count} counts due to empty intersections")
+
+    # Drop these rows from the DataFrame
+    df_grouped = df_grouped[~empty_intersection_rows]
+
+    # Join the intersected features back into a string
+    df_grouped['features'] = df_grouped['features'].apply(lambda x: ','.join(x))
 
     # Rename columns
     df_grouped.columns = ['cell_barcode', 'umi', 'feature']
@@ -219,9 +236,13 @@ def report(input, output):
     # Rename count column
     df_counts.columns = ['cell_barcode', 'feature', 'count']
 
-    # Write to output file
-    df_counts.to_csv(output, sep='\t', index=False, compression='gzip')
+    # Reorder the columns
+    df_counts = df_counts.reindex(['feature', 'count', 'cell_barcode'], axis=1)
 
+    # Write to output file
+    df_counts.to_csv(output, sep='\t', index=False, compression='gzip', header=False)
+
+    sys.exit(1)
 
 def sort_input_bam(file_tuple, cores):
     print("Sorting input .bam")
