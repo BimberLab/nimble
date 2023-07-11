@@ -240,7 +240,7 @@ def report(input, output):
     df_counts = df_counts.reindex(['feature', 'count', 'cell_barcode'], axis=1)
 
     # Write to output file
-    df_counts.to_csv(output, sep='\t', index=False, compression='gzip', header=False)
+    df_counts.to_csv(output, sep='\t', index=False, header=False)
     sys.exit(1)
 
 def sort_input_bam(file_tuple, cores):
