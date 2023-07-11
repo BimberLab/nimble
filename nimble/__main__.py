@@ -241,7 +241,6 @@ def report(input, output):
 
     # Write to output file
     df_counts.to_csv(output, sep='\t', index=False, header=False)
-    sys.exit(1)
 
 def sort_input_bam(file_tuple, cores):
     print("Sorting input .bam")
