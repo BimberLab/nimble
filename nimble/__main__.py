@@ -191,14 +191,28 @@ def intersect_lists(lists):
     # Returns the intersection of all lists in a list
     return list(reduce(set.intersection, map(set, lists)))
 
-def report(input, output):
-    # Read input file
-    df = pd.read_csv(input, sep='\t', compression='gzip')
+def write_empty_df(output):
+    print('No data to parse from input file, writing empty output.')
+    empty_df = pd.DataFrame(columns=['feature', 'count', 'cell_barcode'])
+    empty_df.to_csv(output, sep='\t', index=False, compression='gzip', header=False)
 
+def report(input, output):
+    df = None
+
+    # if the file has data, try to read it. write an empty output and return if there is no data.
+    if os.path.getsize(input) > 0:
+        try:
+            df = pd.read_csv(input, sep='\t', compression='gzip')
+        except pd.errors.EmptyDataError:
+            write_empty_df(output)
+            return
+    else:
+        write_empty_df(output)
+        return
+
+    # If the file is not empty but the DataFrame is, write an empty output
     if df.empty:
-        print('No data in input dataframe, writing empty output.')
-        empty_df = pd.DataFrame(columns=['feature', 'count', 'cell_barcode'])
-        empty_df.to_csv(output, sep='\t', index=False, compression='gzip', header=False)
+        write_empty_df(output)
         return
 
     # Keep only necessary columns
