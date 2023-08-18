@@ -138,7 +138,7 @@ def download(release):
 
 
 # Check if the aligner exists -- if it does, call it with the given parameters.
-def align(reference, output, input, _alignment_path, _log_path, num_cores, strand_filter):
+def align(reference, output, input, _alignment_path, log_path, num_cores, strand_filter):
     path = os.path.join(os.path.dirname(os.path.realpath(__file__)), "aligner")
     input_ext = os.path.splitext(input)[-1].lower()
 
@@ -203,6 +203,7 @@ def report(input, output):
     if os.path.getsize(input) > 0:
         try:
             df = pd.read_csv(input, sep='\t', compression='gzip')
+            df.rename(columns={'r1_cb': 'cb', 'r1_umi': 'umi'}, inplace=True) # Use the r1 version of the cb and umi flags
         except pd.errors.EmptyDataError:
             write_empty_df(output)
             return
@@ -295,7 +296,7 @@ def sort_input_bam(file_tuple, cores):
         print("samtools messages: " + sort_log)
 
 if __name__ == "__main__":
-    parser = argparse.ArgumentParser(description='Process some integers.')
+    parser = argparse.ArgumentParser(description='nimble align')
     subparsers = parser.add_subparsers(title='subcommands', dest='subcommand')
 
     download_parser = subparsers.add_parser('download')
