@@ -1,6 +1,7 @@
 #!/usr/bin/env python
 import sys
 import os
+import shutil
 #os.environ['OPENBLAS_NUM_THREADS'] = '1'
 
 import argparse
@@ -266,6 +267,7 @@ def report(input, output):
 def sort_input_bam(file_tuple, cores):
     print("Sorting input .bam")
     tmp_dir = os.environ.get("TMPDIR")
+    create_tmp_dir = False
 
     bam = ""
     sorted_bam = ""
@@ -275,7 +277,7 @@ def sort_input_bam(file_tuple, cores):
         sorted_bam = file_tuple[0] + "/sorted-" + file_tuple[1]
     else:
         bam = file_tuple[0]
-        sorted_bam = "./sorted" + file_tuple[0]
+        sorted_bam = "./sorted-" + file_tuple[0]
 
     print("Sorting " + bam + " Outputting to " + sorted_bam)
     sys.stdout.flush()
@@ -284,6 +286,15 @@ def sort_input_bam(file_tuple, cores):
         print("Sorted bam file already exists, skipping the sorting step.")
         sys.stdout.flush()
         return
+
+    if tmp_dir and not os.path.exists(tmp_dir):
+        try:
+            os.makedirs(tmp_dir)
+            create_tmp_dir = True
+            print(f"Created temporary directory {tmp_dir}")
+        except OSError as e:
+            print(f"Could not create temporary directory {tmp_dir}: {e}")
+            sys.stdout.flush()
 
     if tmp_dir:
         pysam.sort('-t', 'UR', '-n', '-o', sorted_bam, '-@', str(cores), '-T', tmp_dir, bam)
@@ -294,6 +305,15 @@ def sort_input_bam(file_tuple, cores):
 
     if (sort_log):
         print("samtools messages: " + sort_log)
+        
+    if create_tmp_dir:
+        try:
+            shutil.rmtree(tmp_dir)
+            print(f"Deleted temporary directory {tmp_dir}")
+        except Exception as e:
+            print(f"Could not delete temporary directory {tmp_dir}: {e}")
+        sys.stdout.flush() 
+
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description='nimble align')
