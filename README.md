@@ -1,13 +1,11 @@
 # nimble
-nimble is a fast, accurate, and configurable RNA sequence aligner that executes lightweight alignments on arbitrary reference libraries. It uses pseudo-alignment to rapidly generate supplemental calls to complement a data pipeline's primary alignment. It does this with low overhead, making it possible to run supplemental alignments on almost any machine.
+nimble is a fast, accurate, and configurable RNA sequence alignment tool that executes lightweight alignments on arbitrary reference libraries. It uses pseudo-alignment to rapidly generate supplemental calls to complement a data pipeline's primary alignment. It does this with low overhead, making it possible to run supplemental alignments on almost any machine.
 
 
 # Installation
 
 nimble requires Python 3 and [samtools](http://www.htslib.org/). It supports the following operating systems:
 
-- Windows
-- MacOS
 - Ubuntu
 - CentOS 7
 - Manjaro
@@ -20,11 +18,13 @@ There is also a [docker image](https://github.com/BimberLab/nimble/pkgs/containe
 
 
 # Usage
-Here's an example of generating a library and using it in an alignment:
+Here's an example of generating a library and using it in an alignment, for both .bam and .fastq.gz inputs:
 ```
 nimble generate --file lib.csv --opt-file lib.fasta --output_path lib.json
 
 nimble align --reference lib.json,lib2.json,lib3.json --output out.tsv --input data.bam --alignment_path log.tsv.gz --log log.txt --num_cores 8 --strand_filter fiveprime
+
+nimble align --reference lib.json,lib2.json,lib3.json --output out.tsv --input data_r1_fastq.gz data_r2_fastq.gz --alignment_path log.tsv.gz --log log.txt --num_cores 8 --strand_filter unstranded
 ```
 
 A library is comprised of an input csv or fasta, or both.
