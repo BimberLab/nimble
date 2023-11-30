@@ -176,7 +176,11 @@ def align(reference, output, input, _alignment_path, log_path, num_cores, strand
 
         if input_ext == ".bam" and return_code == 0:
             print("Deleting intermediate sorted .bam file")
+
+        try:
             os.remove(input[0])
+        except Exception as e:
+            print(f"Error when attempting to delete sorted .bam file: {e}")
 
         return return_code
     else:
