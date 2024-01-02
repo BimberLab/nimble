@@ -2,7 +2,6 @@
 import sys
 import os
 import shutil
-#os.environ['OPENBLAS_NUM_THREADS'] = '1'
 
 import argparse
 import subprocess
@@ -139,7 +138,7 @@ def download(release):
 
 
 # Check if the aligner exists -- if it does, call it with the given parameters.
-def align(reference, output, input, _alignment_path, log_path, num_cores, strand_filter):
+def align(reference, output, input, _alignment_path, log_path, num_cores, strand_filter, hard_memory_limit):
     path = os.path.join(os.path.dirname(os.path.realpath(__file__)), "aligner")
     input_ext = os.path.splitext(input[0])[-1].lower()
 
@@ -158,7 +157,7 @@ def align(reference, output, input, _alignment_path, log_path, num_cores, strand
         processed_param_list = []
         for input_file in input:
             processed_param_list.extend(["--input", input_file])
-        processed_param_list.extend(["-c", str(num_cores), "--strand_filter", strand_filter])
+        processed_param_list.extend(["-c", str(num_cores), "--strand_filter", strand_filter, "-m", str(hard_memory_limit)])
 
         for library in library_list:
             out_file_append = ""
@@ -193,7 +192,7 @@ def align(reference, output, input, _alignment_path, log_path, num_cores, strand
             print("Error -- could not find or download aligner.")
             sys.exit()
 
-        return align(reference, output, input, alignment_path, log_path, num_cores, strand_filter)
+        return align(reference, output, input, alignment_path, log_path, num_cores, strand_filter, hard_memory_limit)
 
 def intersect_lists(lists):
     # Returns the intersection of all lists in a list
@@ -342,6 +341,7 @@ if __name__ == "__main__":
     align_parser.add_argument('--log_path', help='The path to the log file.', type=str, default=None)
     align_parser.add_argument('-c', '--num_cores', help='The number of cores to use for alignment.', type=int, default=1)
     align_parser.add_argument('--strand_filter', help='Filter reads based on strand information.', type=str, default="unstranded")
+    align_parser.add_argument('-m', '--hard_memory_limit', help='Number of megabytes to set maximum memory threshold.', type=int, default=0)
 
     report_parser = subparsers.add_parser('report')
     report_parser.add_argument('-i', '--input', help='The input file.', type=str, required=True)
@@ -354,6 +354,6 @@ if __name__ == "__main__":
     elif args.subcommand == 'generate':
         generate(args.file, args.opt_file, args.output_path)
     elif args.subcommand == 'align':
-        sys.exit(align(args.reference, args.output, args.input, args.alignment_path, args.log_path, args.num_cores, args.strand_filter))
+        sys.exit(align(args.reference, args.output, args.input, args.alignment_path, args.log_path, args.num_cores, args.strand_filter, args.hard_memory_limit))
     elif args.subcommand == 'report':
         report(args.input, args.output)
