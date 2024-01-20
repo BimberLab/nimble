@@ -30,14 +30,17 @@ RUN ["pip3", "install", "./nimble"]
 # Download the latest aligner version
 RUN ["python3", "-m", "nimble", "download"]
 
-# Install jemalloc
-RUN yum install -y epel-release && \
-    yum install -y jemalloc jemalloc-devel && \
-    yum clean all && \
-    rm -rf /var/cache/yum
+RUN mkdir -p /opt && cd /opt && git clone https://github.com/jemalloc/jemalloc.git \
+    && mkdir /tmp/jprof && mkdir /tmp/nmt && mkdir /tmp/pmap \
+    && mkdir /diagnostic
 
-# Set LD_PRELOAD and MALLOC_CONF to enable jemalloc profiling
-ENV LD_PRELOAD=/usr/lib64/libjemalloc.so
+RUN cd /opt/jemalloc && git checkout -b stable-4 origin/stable-4
+RUN cd /opt/jemalloc && ./autogen.sh --enable-prof
+RUN cd /opt/jemalloc && make dist
+RUN cd /opt/jemalloc && make
+RUN cd /opt/jemalloc && make install
+
+ENV LD_PRELOAD="/usr/local/lib/libjemalloc.so"
 ENV MALLOC_CONF=prof_leak:true,lg_prof_sample:19,prof_final:true,prof_prefix:/work/jemalloc_profile
 
 ENTRYPOINT ["python3", "-m", "nimble"]
