@@ -30,15 +30,14 @@ RUN ["pip3", "install", "./nimble"]
 # Download the latest aligner version
 RUN ["python3", "-m", "nimble", "download"]
 
-RUN mkdir -p /opt && cd /opt && git clone https://github.com/jemalloc/jemalloc.git \
-    && mkdir /tmp/jprof && mkdir /tmp/nmt && mkdir /tmp/pmap \
-    && mkdir /diagnostic
-
-RUN cd /opt/jemalloc && git checkout -b stable-4 origin/stable-4
-RUN cd /opt/jemalloc && ./autogen.sh --enable-prof
-RUN cd /opt/jemalloc && make dist
-RUN cd /opt/jemalloc && make
-RUN cd /opt/jemalloc && make install
+# Install jemalloc with profiling from the stable-4 branch
+RUN cd /opt \
+    && git clone --branch stable-4 https://github.com/jemalloc/jemalloc.git \
+    && cd jemalloc \
+    && ./autogen.sh \
+    && ./configure --prefix=/usr/local --enable-prof \
+    && make \
+    && make install
 
 ENV LD_PRELOAD="/usr/local/lib/libjemalloc.so"
 ENV MALLOC_CONF=prof_leak:true,lg_prof_sample:19,prof_final:true,prof_prefix:/work/jemalloc_profile
