@@ -38,6 +38,6 @@ RUN yum install -y epel-release && \
 
 # Set LD_PRELOAD and MALLOC_CONF to enable jemalloc profiling
 ENV LD_PRELOAD=/usr/lib64/libjemalloc.so
-ENV MALLOC_CONF=prof_leak:true,lg_prof_sample:19,prof_final:true
+ENV MALLOC_CONF=prof_leak:true,lg_prof_sample:19,prof_final:true,prof_prefix:/work/jemalloc_profile
 
 ENTRYPOINT ["python3", "-m", "nimble"]
