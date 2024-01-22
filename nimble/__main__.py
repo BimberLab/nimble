@@ -173,15 +173,15 @@ def align(reference, output, input, _alignment_path, log_path, num_cores, strand
 
         return_code = proc.returncode
 
-        #if input_ext == ".bam" and return_code == 0:
-            #print("Deleting intermediate sorted .bam file")
+        if input_ext == ".bam" and return_code == 0:
+            print("Deleting intermediate sorted .bam file")
 
-            #try:
-                #os.remove(input[0])
-            #except Exception as e:
-                #print(f"Error when attempting to delete sorted .bam file: {e}")
-        #else:
-            #print("Retaining all input files.")
+            try:
+                os.remove(input[0])
+            except Exception as e:
+                print(f"Error when attempting to delete sorted .bam file: {e}")
+        else:
+            print("Retaining all input files.")
 
         return return_code
     else:
