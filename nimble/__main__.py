@@ -177,7 +177,8 @@ def align(reference, output, input, _alignment_path, log_path, num_cores, strand
             print("Deleting intermediate sorted .bam file")
 
             try:
-                os.remove(input[0])
+                #os.remove(input[0])
+                pass
             except Exception as e:
                 print(f"Error when attempting to delete sorted .bam file: {e}")
         else:
@@ -272,6 +273,29 @@ def report(input, output):
     # Write to output file
     df_counts.to_csv(output, sep='\t', index=False, header=False)
 
+
+def add_concatenated_tag_and_sort(bam_path, sorted_bam_path, cores, tmp_dir):
+    """
+    Adds a concatenated tag (UR+CB) to each read in the BAM file, then sorts the file based on this tag.
+    The sorted file is written to sorted_bam_path.
+    """
+    add_tag_script = os.path.join(os.path.dirname(os.path.realpath(__file__)), "add_tag.py")
+    python_executable = sys.executable  # Path to the current Python interpreter
+
+    sort_command = f"samtools sort -t XC -o {sorted_bam_path} -@ {cores}"
+    if tmp_dir:
+        sort_command += f" -T {tmp_dir}"
+
+    # Construct the pipeline command using the current Python interpreter
+    pipeline_command = f"{python_executable} {add_tag_script} {bam_path} | {sort_command}"
+
+    try:
+        subprocess.run(pipeline_command, shell=True, check=True)
+    except subprocess.CalledProcessError as e:
+        print(f"Error during sorting: {e}")
+        sys.exit(1)
+
+
 def sort_input_bam(file_tuple, cores):
     print("Sorting input .bam")
     tmp_dir = os.environ.get("TMPDIR")
@@ -304,10 +328,7 @@ def sort_input_bam(file_tuple, cores):
             print(f"Could not create temporary directory {tmp_dir}: {e}")
             sys.stdout.flush()
 
-    if tmp_dir:
-        pysam.sort('-t', 'UR', '-n', '-o', sorted_bam, '-@', str(cores), '-T', tmp_dir, bam)
-    else:
-        pysam.sort('-t', 'UR', '-n', '-o', sorted_bam, '-@', str(cores), bam)
+    add_concatenated_tag_and_sort(bam, sorted_bam, cores, tmp_dir)
 
     sort_log = pysam.sort.get_messages()
 
