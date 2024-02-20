@@ -40,6 +40,6 @@ RUN cd /opt \
     && make install_bin install_include install_lib
 
 ENV LD_PRELOAD="/usr/local/lib/libjemalloc.so"
-ENV MALLOC_CONF=prof_leak:true,lg_prof_sample:19,prof_final:true,prof_prefix:/work/jemalloc_profile
+#ENV MALLOC_CONF=prof_leak:true,lg_prof_sample:19,prof_final:true,prof_prefix:/work/jemalloc_profile
 
 ENTRYPOINT ["python3", "-m", "nimble"]

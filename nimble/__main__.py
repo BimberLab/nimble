@@ -205,14 +205,19 @@ def write_empty_df(output):
     empty_df = pd.DataFrame(columns=['feature', 'count', 'cell_barcode'])
     empty_df.to_csv(output, sep='\t', index=False, compression='gzip', header=False)
 
-def report(input, output):
+def summarize_fields(df, columns, output_file):
+    summary_df = df.groupby('umi')[columns].agg(lambda x: x.value_counts().to_dict())
+    summary_df = summary_df.applymap(lambda x: '; '.join([f'{k}({v})' for k, v in x.items()]))
+    summary_df.reset_index().to_csv(output_file, sep='\t', index=False)
+
+def report(input, output, summarize_columns_list=None):
     df = None
 
     # if the file has data, try to read it. write an empty output and return if there is no data.
     if os.path.getsize(input) > 0:
         try:
             df = pd.read_csv(input, sep='\t', compression='gzip')
-            df.rename(columns={'r1_cb': 'cb', 'r1_umi': 'umi'}, inplace=True) # Use the r1 version of the cb and umi flags
+            df.rename(columns={'r1_CB': 'cb', 'r1_UB': 'umi', 'nimble_features': 'features'}, inplace=True) # Use the r1 version of the cb and umi flags
         except pd.errors.EmptyDataError:
             write_empty_df(output)
             return
@@ -226,6 +231,7 @@ def report(input, output):
         return
 
     # Keep only necessary columns
+    df_init = df
     df = df[['features', 'umi', 'cb']]
 
     # Drop rows where 'features', 'umi', or 'cb' are null or empty
@@ -271,6 +277,10 @@ def report(input, output):
 
     # Write to output file
     df_counts.to_csv(output, sep='\t', index=False, header=False)
+
+    if summarize_columns_list:
+        summary_output = "summarize." + output
+        summarize_fields(df_init, summarize_columns_list, summary_output)
 
 def sort_input_bam(file_tuple, cores):
     print("Sorting input .bam")
@@ -323,6 +333,8 @@ def sort_input_bam(file_tuple, cores):
         sys.stdout.flush() 
 
 
+# TODO remove the reference data_type and score_filter variables from the reference library, they no longer exist
+
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description='nimble align')
     subparsers = parser.add_subparsers(title='subcommands', dest='subcommand')
@@ -348,6 +360,7 @@ if __name__ == "__main__":
     report_parser = subparsers.add_parser('report')
     report_parser.add_argument('-i', '--input', help='The input file.', type=str, required=True)
     report_parser.add_argument('-o', '--output', help='The path to the output file.', type=str, required=True)
+    report_parser.add_argument('-s', '--summarize', help='CSV list of columns to summarize.', type=str, default=None)
 
     args = parser.parse_args()
 
@@ -358,4 +371,5 @@ if __name__ == "__main__":
     elif args.subcommand == 'align':
         sys.exit(align(args.reference, args.output, args.input, args.alignment_path, args.log_path, args.num_cores, args.strand_filter, args.hard_memory_limit))
     elif args.subcommand == 'report':
-        report(args.input, args.output)
+        summarize_columns_list = args.summarize.split(',') if args.summarize else None
+        report(args.input, args.output, summarize_columns_list)
