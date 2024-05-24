@@ -22,6 +22,7 @@ from nimble.types import Config
 from nimble.parse import parse_fasta, parse_filter_config, parse_csv
 from nimble.usage import print_usage_and_exit
 from nimble.utils import get_exec_name_from_platform, low_complexity_filter_amount, append_path_string
+from nimble.report_generation import generate_plots
 
 ALIGN_TRIES = 10
 ALIGN_TRIES_THRESHOLD = 0
@@ -333,8 +334,6 @@ def sort_input_bam(file_tuple, cores):
         sys.stdout.flush() 
 
 
-# TODO remove the reference data_type and score_filter variables from the reference library, they no longer exist
-
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description='nimble align')
     subparsers = parser.add_subparsers(title='subcommands', dest='subcommand')
@@ -362,6 +361,10 @@ if __name__ == "__main__":
     report_parser.add_argument('-o', '--output', help='The path to the output file.', type=str, required=True)
     report_parser.add_argument('-s', '--summarize', help='CSV list of columns to summarize.', type=str, default=None)
 
+    plot_parser = subparsers.add_parser('plot')
+    plot_parser.add_argument('--input_file', help='The nimble counts output file to process.', type=str, required=True)
+    plot_parser.add_argument('--output_dir', help='The directory to save the reports and plots to.', type=str, required=True)
+
     args = parser.parse_args()
 
     if args.subcommand == 'download':
@@ -373,3 +376,13 @@ if __name__ == "__main__":
     elif args.subcommand == 'report':
         summarize_columns_list = args.summarize.split(',') if args.summarize else None
         report(args.input, args.output, summarize_columns_list)
+    elif args.subcommand == 'plot':
+        if os.path.getsize(args.input_file) > 0:
+            try:
+                print(f"Preprocessing read data from {args.input_file}")
+                df = pd.read_csv(args.input_file, sep='\t', compression='gzip')
+                generate_plots(df, args.output_dir)
+            except pd.errors.EmptyDataError:
+                print("Input file is empty.")
+        else:
+            print("Input file is empty.")

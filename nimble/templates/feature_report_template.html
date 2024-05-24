@@ -1,0 +1,13 @@
+<h1>Analysis Report for {{ nimble_feature }}</h1>
+<div class="statistics">
+    <p>Number of UMIs: {{ num_UMIs }}</p>
+    <p>Number of Cells: {{ num_cells }}</p>
+</div>
+<h2>Density Graph of r1_POS and r2_POS</h2>
+<img src="{{ pos_density_image }}" alt="Density Graph">
+
+<h2>Violin Plot of Score Distributions</h2>
+<img src="{{ scores_violin_image }}" alt="Violin Plot">
+
+<h2>Bar Plot of Classifications</h2>
+<img src="{{ classifications_bar_image }}" alt="Bar Plot">
