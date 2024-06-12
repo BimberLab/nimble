@@ -9,7 +9,7 @@ ENV LC_ALL en_US.utf8
 
 # Install python3, pip, and dependencies
 RUN yum group install -y "Development Tools" && \
-    yum install -y ncurses-devel bzip2-devel xz-devel zlib-devel wget glibc-devel python3-devel openssl11-devel epel && \
+    yum install -y ncurses-devel bzip2-devel xz-devel zlib-devel wget glibc-devel python3-devel openssl11-devel epel-release.noarch && \
     wget https://www.python.org/ftp/python/3.9.6/Python-3.9.6.tgz && \
     tar xzf Python-3.9.6.tgz && \
     cd Python-3.9.6 && \
