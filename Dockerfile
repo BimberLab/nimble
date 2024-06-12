@@ -10,7 +10,12 @@ ENV LC_ALL en_US.utf8
 # Install python3, pip, and dependencies
 RUN yum group install -y "Development Tools" && \
     yum install -y ncurses-devel bzip2-devel xz-devel zlib-devel wget glibc-devel python3-devel && \
-    yum install -y python3 python-pip && \
+    wget https://www.python.org/ftp/python/3.9.6/Python-3.9.6.tgz && \
+    tar xzf Python-3.9.6.tgz && \
+    cd Python-3.9.6 && \
+    ./configure --enable-optimizations && \
+    make install && \
+    yum install -y python-pip && \
     yum clean all && \
     rm -rf /var/cache/yum
 
