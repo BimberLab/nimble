@@ -9,7 +9,14 @@ ENV LC_ALL en_US.utf8
 
 # Install python3, pip, and dependencies
 RUN yum group install -y "Development Tools" && \
-    yum install -y ncurses-devel bzip2-devel xz-devel zlib-devel wget glibc-devel python3-devel openssl11-devel epel-release.noarch && \
+    yum install -y ncurses-devel bzip2-devel xz-devel zlib-devel wget glibc-devel python3-devel openssl11-devel epel-release.noarch libffi-devel && \
+    wget https://openssl.org/source/openssl-1.1.1k.tar.gz && \
+    tar -xzvf openssl-1.1.1k.tar.gz && \
+    cd openssl-1.1.1k && \ 
+    ./config --prefix=/usr --openssldir=/etc/ssl --libdir=lib no-shared zlib-dynamic && \ 
+    make && \
+    make install && \
+    cd ~ && \ 
     wget https://www.python.org/ftp/python/3.9.6/Python-3.9.6.tgz && \
     tar xzf Python-3.9.6.tgz && \
     cd Python-3.9.6 && \
