@@ -15,7 +15,6 @@ RUN yum group install -y "Development Tools" && \
     cd Python-3.9.6 && \
     ./configure --enable-optimizations && \
     make install && \
-    yum install -y python-pip && \
     yum clean all && \
     rm -rf /var/cache/yum
 
