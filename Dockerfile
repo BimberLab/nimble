@@ -1,5 +1,10 @@
 FROM centos:7
 
+# Set the mirrors to vault, as centos7 is EoL
+RUN sed -i s/mirror.centos.org/vault.centos.org/g /etc/yum.repos.d/*.repo && \
+    sed -i s/^#.*baseurl=http/baseurl=http/g /etc/yum.repos.d/*.repo && \
+    sed -i s/^mirrorlist=http/#mirrorlist=http/g /etc/yum.repos.d/*.repo
+
 # Update mirrors
 RUN yum update -y
 
