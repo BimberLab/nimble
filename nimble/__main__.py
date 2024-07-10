@@ -362,7 +362,7 @@ if __name__ == "__main__":
 
     plot_parser = subparsers.add_parser('plot')
     plot_parser.add_argument('--input_file', help='The nimble counts output file to process.', type=str, required=True)
-    plot_parser.add_argument('--output_dir', help='The directory to save the reports and plots to.', type=str, required=True)
+    plot_parser.add_argument('--output_file', help='Filepath for the HTML report.', type=str, required=True)
 
     args = parser.parse_args()
 
@@ -378,9 +378,9 @@ if __name__ == "__main__":
     elif args.subcommand == 'plot':
         if os.path.getsize(args.input_file) > 0:
             try:
-                print(f"Preprocessing read data from {args.input_file}")
-                df = pd.read_csv(args.input_file, sep='\t', compression='gzip')
-                generate_plots(df, args.output_dir)
+                print(f"Loading alignment data from {args.input_file}")
+                df = pd.read_csv(args.input_file, sep='\t', compression='gzip', low_memory=False)
+                generate_plots(df, args.output_file)
             except pd.errors.EmptyDataError:
                 print("Input file is empty.")
         else:

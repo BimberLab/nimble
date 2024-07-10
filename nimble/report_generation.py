@@ -4,90 +4,118 @@ import numpy as np
 import matplotlib.pyplot as plt
 import seaborn as sns
 from jinja2 import Environment, FileSystemLoader
+import base64
+from io import BytesIO
 
-def classify_max_scores(row):
-    filter_threshold = 67
+def position_density(df, threshold=150000, boundary_expansion=10000):
+    # Combine, sort, and get unique positions
+    all_positions = np.sort(np.unique(np.concatenate((df['r1_POS'].dropna().values, df['r2_POS'].dropna().values))))
 
-    # Replace 0 scores with NaN for max calculation
-    scores = {'r1_forward_score': row['r1_forward_score'],
-              'r1_reverse_score': row['r1_reverse_score'],
-              'r2_forward_score': row['r2_forward_score'],
-              'r2_reverse_score': row['r2_reverse_score']}
-    for key in scores:
-        if scores[key] == 0:
-            scores[key] = np.nan
+    # Detect discontinuities
+    diffs = np.diff(all_positions)
+    break_indices = np.where(diffs > threshold)[0]
+
+    # Adjust threshold if there are more than 5 plots
+    while len(break_indices) > 4:
+        threshold *= 2
+        break_indices = np.where(diffs > threshold)[0]
+
+    if len(break_indices) == 0:
+        # If no discontinuities, create a normal axis
+        fig, ax = plt.subplots(figsize=(12, 6))
+        sns.kdeplot(df['r1_POS'], bw_adjust=0.5, label='r1_POS', color='blue', linestyle='--', ax=ax, warn_singular=False)
+        sns.kdeplot(df['r2_POS'], bw_adjust=0.5, label='r2_POS', color='red', linestyle='-', ax=ax, warn_singular=False)
+        ax.legend()
+        ax.set_xlim(min(df['r1_POS'].min(), df['r2_POS'].min()), max(df['r1_POS'].max(), df['r2_POS'].max()))
+        ax.set_xlabel('Position within genome')
+        ax.set_ylabel('Density')
+        pos_density_image = generate_base64_image(fig)
+        plt.close(fig)
+        return pos_density_image
+
+    # Create multiple segments for each region between breaks
+    segments = []
+    prev_index = 0
+    for idx in break_indices:
+        start = max(0, all_positions[prev_index] - boundary_expansion)
+        end = all_positions[idx] + boundary_expansion
+        segments.append((start, end))
+        prev_index = idx + 1
+    start = max(0, all_positions[break_indices[-1] + 1] - boundary_expansion)
+    end = all_positions.max() + boundary_expansion
+    segments.append((start, end))
+
+    # Filter out empty segments
+    valid_segments = []
+    for start, end in segments:
+        if len(df['r1_POS'][(df['r1_POS'] >= start) & (df['r1_POS'] <= end)]) > 1 or \
+           len(df['r2_POS'][(df['r2_POS'] >= start) & (df['r2_POS'] <= end)]) > 1:
+            valid_segments.append((start, end))
+
+    # Plot with discontinuities using subplots
+    num_segments = len(valid_segments)
+    fig, axes = plt.subplots(1, num_segments, figsize=(14, 6), sharey=True)
+
+    if num_segments == 1:
+        axes = [axes]  # To make it iterable if there's only one segment
+
+    for i, (start, end) in enumerate(valid_segments):
+        sns.kdeplot(df['r1_POS'][(df['r1_POS'] >= start) & (df['r1_POS'] <= end)], 
+                    bw_adjust=0.5, color='blue', linestyle='--', ax=axes[i], warn_singular=False)
+        sns.kdeplot(df['r2_POS'][(df['r2_POS'] >= start) & (df['r2_POS'] <= end)], 
+                    bw_adjust=0.5, color='red', linestyle='-', ax=axes[i], warn_singular=False)
+        axes[i].set_xlim(start, end)
+        axes[i].tick_params(left=True)
+        axes[i].tick_params(bottom=True)
+        axes[i].set_xlabel('')
+        axes[i].set_ylabel('')
+
+    fig.text(0.5, 0.01, 'Position within genome', ha='center')
+    fig.text(0.01, 0.5, 'Density', va='center', rotation='vertical')
+
+    handles = [plt.Line2D([0,1],[0,1], color='blue', linestyle='--', label='r1_POS'),
+               plt.Line2D([0,1],[0,1], color='red', linestyle='-', label='r2_POS')]
+    axes[-1].legend(handles=handles, loc='upper right')
+
+    pos_density_image = generate_base64_image(fig)
+    plt.close(fig)
+    return pos_density_image
+
+# Violin plot for scores
+def score_violin(df):
+    fig, ax = plt.subplots(figsize=(12, 6))
+    sns.violinplot(data=df[['r1_forward_score', 'r2_forward_score']], ax=ax)
     
-    # Calculate max scores for r1 and r2
-    max_r1 = max(scores['r1_forward_score'], scores['r1_reverse_score'])
-    max_r2 = max(scores['r2_forward_score'], scores['r2_reverse_score'])
+    # Set fixed tick positions and labels
+    ax.set_xticks([0, 1])
+    ax.set_xticklabels(['r1 score in bp', 'r2 score in bp'])
     
-    # Apply filter conditions
-    filtered = (np.isnan(max_r1) or max_r1 >= filter_threshold) and (np.isnan(max_r2) or max_r2 >= filter_threshold)
-    return 'unfiltered' if filtered else 'filtered'
+    scores_violin_image = generate_base64_image(fig)
+    plt.close(fig)
+    return scores_violin_image
 
-def classify_scores_with_filter(row):
-    threshold = 50
-    scores = [row['r1_forward_score'], row['r1_reverse_score'], row['r2_forward_score'], row['r2_reverse_score']]
-    filters = [row['r1_filter_forward'], row['r1_filter_reverse'], row['r2_filter_forward'], row['r2_filter_reverse']]
-    score_columns = ['r1_forward_score', 'r1_reverse_score', 'r2_forward_score', 'r2_reverse_score']
-
-    # Check if any scores are above the threshold
-    score_names = [score_columns[i] for i, score in enumerate(scores) if score > threshold]
-    score_label = '+'.join(score_names) if score_names else 'None'
-
-    # Check filters
-    filter_label = 'score_below_threshold' if any(f == 'Score Below Threshold' for f in filters) else 'no_score_below_threshold'
+def feature_confusion_matrix(df):
+    df.loc[df['r1_GN'].isnull(), 'r1_GN'] = 'Not called'
     
-    # Combine labels
-    combined_label = score_label + '+' + filter_label
-    return combined_label
-
-def tag_dataframe(df):
-    df['Max_Score_Filter'] = df.apply(classify_max_scores, axis=1)
-    df['Classification'] = df.apply(classify_scores_with_filter, axis=1)
-    df['Is_Filtered'] = df.apply(lambda row: 'unfiltered' if row['Classification'] in [
-        'None+no_score_below_threshold', 'None+score_below_threshold', 
-        'r1_reverse_score+no_score_below_threshold', 'r1_forward_score+no_score_below_threshold',
-        'r2_forward_score+no_score_below_threshold', 'r2_reverse_score+no_score_below_threshold'
-    ] or row['Max_Score_Filter'] == 'filtered' else 'filtered', axis=1)
-    return df
-
-def filter_dataframe(df):
-    df = tag_dataframe(df)
-    return df[df['Is_Filtered'] == 'unfiltered']
+    feature_counts = df.groupby(['nimble_features', 'r1_GN']).size().unstack(fill_value=0)
+    
+    fig, ax = plt.subplots(figsize=(12, 3))
+    sns.heatmap(feature_counts, annot=True, fmt='d', cmap='viridis', ax=ax)
+    ax.set_xlabel('Input file call')
+    ax.set_ylabel('Nimble call')
+    feature_conf_matrix_image = generate_base64_image(fig)
+    plt.close(fig)
+    return feature_conf_matrix_image
 
 
-def generate_plots_for_feature(df, output_dir, nimble_feature):
-    # Number of unique values
+def generate_plots_for_feature(df, nimble_feature):
+    # Calculate coarse statistics that get reported at the top
     num_UMIs = df['r1_UB'].nunique()
     num_cells = df['r1_CB'].nunique()
     
-    # Density graph for r1_POS and r2_POS
-    plt.figure(figsize=(12, 6))
-    sns.kdeplot(df[df['r1_POS'] > 0]['r1_POS'], bw_adjust=0.5, label='r1_POS', color='blue', linestyle='--')
-    sns.kdeplot(df[df['r2_POS'] > 0]['r2_POS'], bw_adjust=0.5, label='r2_POS', color='red', linestyle='-')
-    plt.title('Density Plot of Positions')
-    plt.legend()
-    plt.xlim(df.loc[df['r1_POS'] > 0, 'r1_POS'].min(), df.loc[df['r2_POS'] > 0, 'r2_POS'].max())
-    plt.xlabel('Position')
-    plt.savefig(f"{output_dir}/{nimble_feature}_positions_density.png")
-    plt.close()
-
-    # Violin plot for scores
-    plt.figure(figsize=(12, 6))
-    sns.violinplot(data=df[['r1_forward_score', 'r1_reverse_score', 'r2_forward_score', 'r2_reverse_score']])
-    plt.title('Violin Plot of Scores')
-    plt.savefig(f"{output_dir}/{nimble_feature}_scores_violin.png")
-    plt.close()
-
-    # Bar plot for Classifications
-    plt.figure(figsize=(12, 6))
-    ax = df['Classification'].value_counts().plot(kind='bar')
-    plt.title('Bar Plot of Classifications')
-    ax.set_xticklabels(ax.get_xticklabels(), rotation=45, ha="right")
-    plt.tight_layout()
-    plt.savefig(f"{output_dir}/{nimble_feature}_classifications_bar.png")
-    plt.close()
+    pos_density_image = position_density(df)
+    scores_violin_image = score_violin(df)
+    feature_conf_matrix_image = feature_confusion_matrix(df)
 
     # Load Jinja2 template
     current_dir = os.path.dirname(os.path.abspath(__file__))
@@ -97,32 +125,35 @@ def generate_plots_for_feature(df, output_dir, nimble_feature):
     
     # Render report
     html_content = template.render(num_UMIs=num_UMIs, num_cells=num_cells, nimble_feature=nimble_feature,
-                                   pos_density_image=f"{nimble_feature}_positions_density.png",
-                                   scores_violin_image=f"{nimble_feature}_scores_violin.png",
-                                   classifications_bar_image=f"{nimble_feature}_classifications_bar.png")
-    with open(f"{output_dir}/{nimble_feature}_report.html", 'w') as f:
-        f.write(html_content)
+                                   pos_density_image=pos_density_image,
+                                   scores_violin_image=scores_violin_image,
+                                   feature_conf_matrix_image=feature_conf_matrix_image)
+    return html_content
 
-def generate_plots(df, output_dir):
-    df = tag_dataframe(df)
+def generate_plots(df, output_file):
     valid_features = [feature for feature in df['nimble_features'].dropna().unique() if ',' not in feature]
-    report_files = []
+    reports = []
 
     for feature in valid_features:
-        print(f"Writing plots for feature {feature}")
+        print(f"Generating plots for feature {feature}")
         feature_df = df[df['nimble_features'] == feature]
-        report_filename = f"{feature}_report.html"
-        report_file_path = os.path.join(output_dir, report_filename)
-        generate_plots_for_feature(feature_df, output_dir, feature)
-        report_files.append(report_file_path)
+        report_content = generate_plots_for_feature(feature_df, feature)
+        reports.append(report_content)
 
     print("Writing final report")
-    concatenate_reports(report_files, output_dir)
+    concatenate_reports(reports, output_file)
 
-def concatenate_reports(report_files, output_dir):
-    main_report_path = os.path.join(output_dir, "final_report.html")
-    with open(main_report_path, 'w') as main_file:
-        main_file.write("""
+def generate_base64_image(fig):
+    buf = BytesIO()
+    fig.savefig(buf, format="png", bbox_inches='tight')
+    buf.seek(0)
+    img_base64 = base64.b64encode(buf.read()).decode('utf-8')
+    buf.close()
+    return img_base64
+
+def concatenate_reports(reports, output_file):
+    with open(output_file, 'w') as f:
+        f.write("""
         <!DOCTYPE html>
         <html lang="en">
         <head>
@@ -132,16 +163,13 @@ def concatenate_reports(report_files, output_dir):
             <style>
                 body { font-family: Arial, sans-serif; margin: 40px; }
                 h1, h2 { color: #333; }
-                img { width: 100%; height: auto; margin-top: 20px; }
-                .statistics { margin-top: 20px; }
-                .statistics p { font-size: 16px; color: #666; }
+                img { width: 70%; height: 50%; margin-top: 20px; }
             </style>
         </head>
         <body>
         """)
 
-        for report_file in report_files:
-            with open(report_file, 'r') as file:
-                main_file.write(file.read() + "\n<br/>\n")
+        for report in reports:
+            f.write(report + "\n<br/>\n")
         
-        main_file.write("</body></html>")
+        f.write("</body></html>")
