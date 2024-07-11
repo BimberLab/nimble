@@ -1,5 +1,5 @@
 biopython==1.78
-certifi==2020.12.5
+certifi==2023.7.22
 chardet==4.0.0
 contourpy==1.2.1
 cycler==0.12.1
