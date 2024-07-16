@@ -139,7 +139,7 @@ def download(release):
 
 
 # Check if the aligner exists -- if it does, call it with the given parameters.
-def align(reference, output, input, _alignment_path, log_path, num_cores, strand_filter):
+def align(reference, output, input, num_cores, strand_filter, trim):
     path = os.path.join(os.path.dirname(os.path.realpath(__file__)), "aligner")
     input_ext = os.path.splitext(input[0])[-1].lower()
 
@@ -148,7 +148,6 @@ def align(reference, output, input, _alignment_path, log_path, num_cores, strand
             split = input[0].rsplit("/", 1)
             sort_input_bam(split, num_cores)
             input = [split[0] + "/sorted-" + split[1]]
-
 
         print("Aligning input data to the reference libraries")
         sys.stdout.flush()
@@ -167,6 +166,10 @@ def align(reference, output, input, _alignment_path, log_path, num_cores, strand
                 out_file_append = "." + os.path.splitext(os.path.basename(library))[0]
 
             processed_param_list.extend(["-r", library, "-o", append_path_string(output, out_file_append)])
+
+        if trim != "":
+            processed_param_list.extend(["-t", trim])
+
         print(processed_param_list)
 
         proc = subprocess.Popen([path] + processed_param_list)
@@ -195,7 +198,7 @@ def align(reference, output, input, _alignment_path, log_path, num_cores, strand
             print("Error -- could not find or download aligner.")
             sys.exit()
 
-        return align(reference, output, input, alignment_path, log_path, num_cores, strand_filter)
+        return align(reference, output, input, num_cores, strand_filter, trim)
 
 def intersect_lists(lists):
     # Returns the intersection of all lists in a list
@@ -350,10 +353,9 @@ if __name__ == "__main__":
     align_parser.add_argument('--reference', help='The reference genome to align to.', type=str, required=True)
     align_parser.add_argument('--output', help='The path to the output file.', type=str, required=True)
     align_parser.add_argument('--input', help='The input reads.', type=str, required=True, nargs='+')
-    align_parser.add_argument('--alignment_path', help='The path to the alignment file.', type=str, default=None)
-    align_parser.add_argument('--log_path', help='The path to the log file.', type=str, default=None)
     align_parser.add_argument('-c', '--num_cores', help='The number of cores to use for alignment.', type=int, default=1)
     align_parser.add_argument('--strand_filter', help='Filter reads based on strand information.', type=str, default="unstranded")
+    align_parser.add_argument('--trim', help='Configuration for trimming read-data, in the format <TARGET_LENGTH>:<STRICTNESS>, comma-separated, one entry for each passed library', type=str, default="")
 
     report_parser = subparsers.add_parser('report')
     report_parser.add_argument('-i', '--input', help='The input file.', type=str, required=True)
@@ -371,7 +373,7 @@ if __name__ == "__main__":
     elif args.subcommand == 'generate':
         generate(args.file, args.opt_file, args.output_path)
     elif args.subcommand == 'align':
-        sys.exit(align(args.reference, args.output, args.input, args.alignment_path, args.log_path, args.num_cores, args.strand_filter))
+        sys.exit(align(args.reference, args.output, args.input, args.alignment_path, args.log_path, args.num_cores, args.strand_filter, args.trim))
     elif args.subcommand == 'report':
         summarize_columns_list = args.summarize.split(',') if args.summarize else None
         report(args.input, args.output, summarize_columns_list)
