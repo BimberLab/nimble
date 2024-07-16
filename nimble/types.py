@@ -9,7 +9,7 @@ class DataType(str, Enum):
 # Alignment config to be serialized and passed to the backend aligner
 class Config:
     def __init__(self):
-        self.score_threshold = 60
+        self.score_threshold = 20
         self.score_filter = 25
         self.score_percent = 0.5
         self.num_mismatches = 0
@@ -21,6 +21,8 @@ class Config:
         self.data_type = DataType.FASTA
         self.filters = []
         self.max_hits_to_report = 10
+        self.trim_target_length = 50
+        self.trim_strictness = 0.9
 
 
 # Type to contain the actual sequence data/metadata. Can be arbitrarily modified at runtime to contain any metadata.
