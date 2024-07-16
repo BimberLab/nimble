@@ -373,7 +373,7 @@ if __name__ == "__main__":
     elif args.subcommand == 'generate':
         generate(args.file, args.opt_file, args.output_path)
     elif args.subcommand == 'align':
-        sys.exit(align(args.reference, args.output, args.input, args.alignment_path, args.log_path, args.num_cores, args.strand_filter, args.trim))
+        sys.exit(align(args.reference, args.output, args.input, args.num_cores, args.strand_filter, args.trim))
     elif args.subcommand == 'report':
         summarize_columns_list = args.summarize.split(',') if args.summarize else None
         report(args.input, args.output, summarize_columns_list)
