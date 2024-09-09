@@ -15,6 +15,7 @@ import pandas as pd
 import numpy as np
 from collections import Counter
 from functools import reduce
+from importlib.metadata import version as get_version 
 
 from sys import platform
 
@@ -338,7 +339,14 @@ def sort_input_bam(file_tuple, cores):
 
 
 if __name__ == "__main__":
+    try:
+        nimble_version = get_version('nimble')
+    except Exception:
+        nimble_version = 'unknown'
+
     parser = argparse.ArgumentParser(description='nimble align')
+    parser.add_argument('-v', '--version', action='version', version=f'nimble {nimble_version}')
+
     subparsers = parser.add_subparsers(title='subcommands', dest='subcommand')
 
     download_parser = subparsers.add_parser('download')

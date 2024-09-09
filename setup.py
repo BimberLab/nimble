@@ -5,7 +5,7 @@ with open("README.md", "r") as f:
 
 setuptools.setup(
     name="nimble",
-    version="0.1.0",
+    version="0.9.0",
     author="Sebastian Benjamin",
     author_email="benjamse@ohsu.edu",
     description="A tool for generating calls on bulk-seq and 10x RNA genomes",
