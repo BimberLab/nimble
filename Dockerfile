@@ -31,14 +31,21 @@ RUN yum group install -y "Development Tools" && \
     yum clean all && \
     rm -rf /var/cache/yum
 
-# Install samtools
+# Install samtools and create tmp folders:
 RUN cd /tmp &&\
         wget https://github.com/samtools/samtools/releases/download/1.13/samtools-1.13.tar.bz2 &&\
         tar xvjf samtools-1.13.tar.bz2 &&\
         cd samtools-1.13 &&\
         ./configure --prefix=/usr/local &&\
         make &&\
-        make install
+        make install &&\
+        # This is to avoid the numba 'cannot cache function' error, such as: https://github.com/numba/numba/issues/5566
+        mkdir /numba_cache && chmod -R 777 /numba_cache &&\
+        mkdir /mpl_cache && chmod -R 777 /mpl_cache
+        
+# NOTE: this is required when running as non-root. Setting MPLCONFIGDIR removes a similar warning.
+ENV NUMBA_CACHE_DIR=/numba_cache
+ENV MPLCONFIGDIR=/mpl_cache
 
 # Install nimble
 ADD . /nimble
