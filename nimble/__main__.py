@@ -2,6 +2,8 @@
 import sys
 import os
 import shutil
+import ctypes as ct
+import csv
 
 import argparse
 import subprocess
@@ -339,6 +341,8 @@ def sort_input_bam(file_tuple, cores):
 
 
 if __name__ == "__main__":
+    csv.field_size_limit(int(ct.c_ulong(-1).value // 2))
+
     try:
         nimble_version = get_version('nimble')
     except Exception:
