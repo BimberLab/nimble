@@ -54,6 +54,10 @@ def position_density(df, threshold=150000, boundary_expansion=10000):
 
     # Plot with discontinuities using subplots
     num_segments = len(valid_segments)
+    
+    if num_segments == 0:
+        raise ValueError("No valid segments found for position density plot.")
+
     fig, axes = plt.subplots(1, num_segments, figsize=(14, 6), sharey=True)
 
     if num_segments == 1:
@@ -107,28 +111,36 @@ def feature_confusion_matrix(df):
     plt.close(fig)
     return feature_conf_matrix_image
 
+#def hit_orientation_tile(df):
+    
 
 def generate_plots_for_feature(df, nimble_feature):
-    # Calculate coarse statistics that get reported at the top
-    num_UMIs = df['r1_UB'].nunique()
-    num_cells = df['r1_CB'].nunique()
-    
-    pos_density_image = position_density(df)
-    scores_violin_image = score_violin(df)
-    feature_conf_matrix_image = feature_confusion_matrix(df)
+    try:
+        # Calculate coarse statistics that get reported at the top
+        num_UMIs = df['r1_UB'].nunique()
+        num_cells = df['r1_CB'].nunique()
+        
+        pos_density_image = position_density(df)
+        scores_violin_image = score_violin(df)
+        feature_conf_matrix_image = feature_confusion_matrix(df)
+        #hit_orientation_tile_image = hit_orientation_tile(df)
 
-    # Load Jinja2 template
-    current_dir = os.path.dirname(os.path.abspath(__file__))
-    templates_dir = os.path.join(current_dir, 'templates')
-    env = Environment(loader=FileSystemLoader(templates_dir))
-    template = env.get_template('feature_report_template.html')
-    
-    # Render report
-    html_content = template.render(num_UMIs=num_UMIs, num_cells=num_cells, nimble_feature=nimble_feature,
-                                   pos_density_image=pos_density_image,
-                                   scores_violin_image=scores_violin_image,
-                                   feature_conf_matrix_image=feature_conf_matrix_image)
-    return html_content
+        # Load Jinja2 template
+        current_dir = os.path.dirname(os.path.abspath(__file__))
+        templates_dir = os.path.join(current_dir, 'templates')
+        env = Environment(loader=FileSystemLoader(templates_dir))
+        template = env.get_template('feature_report_template.html')
+        
+        # Render report
+        html_content = template.render(num_UMIs=num_UMIs, num_cells=num_cells, nimble_feature=nimble_feature,
+                                    pos_density_image=pos_density_image,
+                                    scores_violin_image=scores_violin_image,
+                                    feature_conf_matrix_image=feature_conf_matrix_image)
+                                    #hit_orientation_tile_image=hit_orientation_tile_image)
+        return html_content
+    except Exception as e:
+        print(f"Error generating plots for feature {nimble_feature}: {e}")
+        return f"<h2>Error generating plots for feature {nimble_feature}</h2><p>{e}</p>"
 
 def generate_plots(df, output_file):
     valid_features = [feature for feature in df['nimble_features'].dropna().unique() if ',' not in feature]
