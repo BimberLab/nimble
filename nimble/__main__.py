@@ -217,7 +217,7 @@ def summarize_fields(df, columns, output_file):
     summary_df = summary_df.applymap(lambda x: '; '.join([f'{k}({v})' for k, v in x.items()]))
     summary_df.reset_index().to_csv(output_file, sep='\t', index=False)
 
-def report(input, output, summarize_columns_list=None):
+def report(input, output, summarize_columns_list=None, threshold=0.05):
     df = None
 
     # if the file has data, try to read it. write an empty output and return if there is no data.
@@ -245,41 +245,92 @@ def report(input, output, summarize_columns_list=None):
     df = df.dropna(subset=['features', 'umi', 'cb'])
     df = df[(df['features'] != '') & (df['umi'] != '') & (df['cb'] != '')]
 
-    # Split the feature strings into lists
-    df['features'] = df['features'].str.split(',')
+    # Sort ambiguous features into consistent order
+    def sort_features(feature_str):
+        features = feature_str.split(',')
+        return ','.join(sorted(features))
 
-    # Group by cell barcode (CB) and UMI, aggregate features into a list
-    df_grouped = df.groupby(['cb', 'umi'])['features'].apply(list)
+    df['features'] = df['features'].apply(sort_features)
 
-    # Calculate the intersection of features within each UMI
-    df_grouped = df_grouped.apply(intersect_lists)
+    # Merge duplicate rows after sorting ambiguous features
+    df = df.groupby(['cb', 'umi', 'features']).size().reset_index(name='count')
 
-    # Convert back to a DataFrame
-    df_grouped = df_grouped.reset_index()
+    # Per-UMI proportional count assignment and filtration
+    def filter_umi_features(umi_group):
+        counts = []
+        total_counts = 0
 
-    # Identify rows where the intersection resulted in an empty list
-    empty_intersection_rows = df_grouped['features'].apply(lambda x: len(x) == 0)
+        # Initial proportional counts
+        for _, row in umi_group.iterrows():
+            features = row['features'].split(',')
+            count_per_feature = row['count'] / len(features)
+            total_counts += row['count']
+            for feature in features:
+                counts.append((feature, count_per_feature))
 
-    # Count these rows and print the number
+        # Aggregate counts per feature
+        feature_counts = pd.DataFrame(counts, columns=['feature', 'count']).groupby('feature')['count'].sum()
+
+        # Iterative filtering
+        while True:
+            feature_ratios = feature_counts / total_counts
+            to_drop = feature_ratios[feature_ratios < threshold].index
+
+            if len(to_drop) == 0:
+                break
+
+            # Reassign counts, excluding filtered features
+            filtered_counts = []
+            total_counts = 0
+
+            for _, row in umi_group.iterrows():
+                features = [f for f in row['features'].split(',') if f not in to_drop]
+                if not features:
+                    continue
+                count_per_feature = row['count'] / len(features)
+                total_counts += row['count']
+                for feature in features:
+                    filtered_counts.append((feature, count_per_feature))
+
+            feature_counts = pd.DataFrame(filtered_counts, columns=['feature', 'count']).groupby('feature')['count'].sum()
+
+        # Return remaining features
+        remaining_features = feature_counts.index.tolist()
+        return ','.join(sorted(remaining_features))
+
+    # Apply UMI filtration
+    filtered_umis = (
+        df.groupby(['cb', 'umi'])
+        .apply(filter_umi_features)
+        .reset_index(name='filtered_features')
+    )
+
+    # Filter out rows where 'filtered_features' is empty
+    filtered_umis = filtered_umis[filtered_umis['filtered_features'] != '']
+
+    # Merge the filtered results back to the main DataFrame on 'cb' and 'umi'
+    df = pd.merge(df, filtered_umis[['cb', 'umi', 'filtered_features']], on=['cb', 'umi'], how='inner')
+
+    df = df[df['filtered_features'] != '']
+
+    # Continue with UMI intersection logic
+    df['filtered_features'] = df['filtered_features'].str.split(',')
+    df_grouped = df.groupby(['cb', 'umi'])['filtered_features'].apply(list)
+    df_grouped = df_grouped.apply(intersect_lists).reset_index()
+
+    # Identify and drop rows with empty intersections
+    empty_intersection_rows = df_grouped['filtered_features'].apply(lambda x: len(x) == 0)
     empty_intersection_count = empty_intersection_rows.sum()
     print(f"Dropped {empty_intersection_count} counts due to empty intersections")
-
-    # Drop these rows from the DataFrame
     df_grouped = df_grouped[~empty_intersection_rows]
 
-    # Join the intersected features back into a string
-    df_grouped['features'] = df_grouped['features'].apply(lambda x: ','.join(x))
+    # Convert intersected features back to strings
+    df_grouped['filtered_features'] = df_grouped['filtered_features'].apply(lambda x: ','.join(x))
 
-    # Rename columns
+    # Rename and reorder columns
     df_grouped.columns = ['cell_barcode', 'umi', 'feature']
-
-    # Count unique UMIs per cell_barcode-feature pair
     df_counts = df_grouped.groupby(['cell_barcode', 'feature']).size().reset_index()
-
-    # Rename count column
     df_counts.columns = ['cell_barcode', 'feature', 'count']
-
-    # Reorder the columns
     df_counts = df_counts.reindex(['feature', 'count', 'cell_barcode'], axis=1)
 
     # Write to output file
@@ -373,6 +424,12 @@ if __name__ == "__main__":
     report_parser.add_argument('-i', '--input', help='The input file.', type=str, required=True)
     report_parser.add_argument('-o', '--output', help='The path to the output file.', type=str, required=True)
     report_parser.add_argument('-s', '--summarize', help='CSV list of columns to summarize.', type=str, default=None)
+    report_parser.add_argument(
+        '-t', '--threshold', 
+        help='Proportional count threshold for filtering features (default: 0.05).', 
+        type=float, 
+        default=0.05
+    )
 
     plot_parser = subparsers.add_parser('plot')
     plot_parser.add_argument('--input_file', help='The nimble counts output file to process.', type=str, required=True)
@@ -388,7 +445,8 @@ if __name__ == "__main__":
         sys.exit(align(args.reference, args.output, args.input, args.num_cores, args.strand_filter, args.trim))
     elif args.subcommand == 'report':
         summarize_columns_list = args.summarize.split(',') if args.summarize else None
-        report(args.input, args.output, summarize_columns_list)
+        report(args.input, args.output, summarize_columns_list, args.threshold)
+
     elif args.subcommand == 'plot':
         if os.path.getsize(args.input_file) > 0:
             try:

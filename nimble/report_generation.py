@@ -111,9 +111,6 @@ def feature_confusion_matrix(df):
     plt.close(fig)
     return feature_conf_matrix_image
 
-#def hit_orientation_tile(df):
-    
-
 def generate_plots_for_feature(df, nimble_feature):
     try:
         # Calculate coarse statistics that get reported at the top
@@ -123,7 +120,6 @@ def generate_plots_for_feature(df, nimble_feature):
         pos_density_image = position_density(df)
         scores_violin_image = score_violin(df)
         feature_conf_matrix_image = feature_confusion_matrix(df)
-        #hit_orientation_tile_image = hit_orientation_tile(df)
 
         # Load Jinja2 template
         current_dir = os.path.dirname(os.path.abspath(__file__))
@@ -136,7 +132,6 @@ def generate_plots_for_feature(df, nimble_feature):
                                     pos_density_image=pos_density_image,
                                     scores_violin_image=scores_violin_image,
                                     feature_conf_matrix_image=feature_conf_matrix_image)
-                                    #hit_orientation_tile_image=hit_orientation_tile_image)
         return html_content
     except Exception as e:
         print(f"Error generating plots for feature {nimble_feature}: {e}")
