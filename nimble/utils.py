@@ -6,13 +6,6 @@ import numpy as np
 
 from pathlib import Path
 
-
-# This value was derived from seeing how much modification of the input reference lib is necessary
-# for nimble not to return massive counts due to matching high-entropy regions
-LOW_COMPLEXITY_REGION_LEN = 15
-low_complexity_filter_amount = 0
-
-
 def append_path_string(input_path, pathAppendString):
     # Extract the filename from the input path
     filename = os.path.basename(input_path)
@@ -120,39 +113,97 @@ def write_data_to_tsv(output_path, out_data, metadata):
 
         f.write(str_rep)
 
-# NOTE: This function was introduced in mid 2021. At the time, nimble would produce extremely high counts if there were
-# low complexity regions in the reference data, like poly-A tails. While we continue to proof nimble results after quite a bit
-# of development effort and QC work, for the time being this functionality is disabled to see if it is supressing useful nimble
-# counts
 def trim_low_complexity_regions(seq):
-    #global low_complexity_filter_amount
-    #current_base = None
-    #current_region = None
-    #regions = []
-    #new_seq = ""
-
-    # Partition the sequence into contiguous regions
-    #for base in seq:
-    #     if current_base == None:
-    #         current_base = base
-    #         current_region = current_base
-    #         continue
-
-    #     if base != current_base:
-    #         regions.append(current_region)
-    #         current_base = base
-    #         current_region = current_base
-    #     else:
-    #         current_region += base
-
-    # regions.append(current_region)
-
-    # Concat all of the regions, skipping contiguous regions with length >= LOW_COMPLEXITY_REGION_LEN
-    # for region in regions:
-    #     if len(region) < LOW_COMPLEXITY_REGION_LEN:
-    #         new_seq += region
-    #     else:
-    #       low_complexity_filter_amount += 1
-
-    #return new_seq
     return seq
+
+def per_umi_thresholding(df, threshold):
+    def filter_umi_features(umi_group):
+        counts = []
+        total_score = 0
+
+        # Initial proportional scores
+        for _, row in umi_group.iterrows():
+            features = row['features'].split(',')
+            score_per_feature = row['nimble_score'] / len(features)
+            total_score += row['nimble_score']
+            for feature in features:
+                counts.append({'feature': feature, 'nimble_score': score_per_feature})
+
+        # Aggregate scores per feature
+        feature_scores = pd.DataFrame(counts).groupby('feature')['nimble_score'].sum()
+
+        # Iterative filtering
+        while True:
+            # Check to handle empty feature_scores
+            if feature_scores.empty:
+                # No features left after filtering
+                filtered_features = ''
+                break
+
+            feature_ratios = feature_scores / total_score
+            to_drop = feature_ratios[feature_ratios < threshold].index
+
+            if len(to_drop) == 0:
+                # No more features to drop
+                filtered_features = ','.join(sorted(feature_scores.index))
+                break
+
+            # Reassign scores, excluding filtered features
+            filtered_counts = []
+            total_score = 0
+
+            for _, row in umi_group.iterrows():
+                features = [f for f in row['features'].split(',') if f not in to_drop]
+                if not features:
+                    continue
+                score_per_feature = row['nimble_score'] / len(features)
+                total_score += row['nimble_score']
+                for feature in features:
+                    filtered_counts.append({'feature': feature, 'nimble_score': score_per_feature})
+
+            # Check to handle empty filtered_counts
+            if not filtered_counts:
+                # No features left after filtering
+                filtered_features = ''
+                break
+
+            feature_scores = pd.DataFrame(filtered_counts).groupby('feature')['nimble_score'].sum()
+
+        # Prepare the result DataFrame for this UMI group
+        result = umi_group.copy()
+        result['filtered_features'] = filtered_features
+
+        return result[['cb', 'umi', 'features', 'filtered_features']]
+
+    # Apply the function to each UMI group
+    filtered_umis = df.groupby(['cb', 'umi']).apply(filter_umi_features).reset_index(drop=True)
+
+    # Merge the filtered results back to the main DataFrame on 'cb', 'umi', 'features'
+    df = pd.merge(
+        df,
+        filtered_umis[['cb', 'umi', 'features', 'filtered_features']],
+        on=['cb', 'umi', 'features'],
+        how='inner'
+    )
+
+    # Filter out rows with empty 'filtered_features'
+    df = df[df['filtered_features'] != '']
+
+    return df
+
+def umi_intersection(df):
+    # Convert filtered_features to lists
+    df['filtered_features'] = df['filtered_features'].str.split(',')
+
+    # Group by cb and umi, collect lists of lists
+    df_grouped = df.groupby(['cb', 'umi'])['filtered_features'].apply(list).reset_index()
+
+    # Apply intersection to the lists of lists
+    df_grouped['filtered_features'] = df_grouped['filtered_features'].apply(intersect_lists)
+
+    return df_grouped
+
+def intersect_lists(list_of_lists):
+    if not list_of_lists:
+        return []
+    return list(set.intersection(*map(set, list_of_lists)))

@@ -1,0 +1,26 @@
+<h1>Summary of UMI/Cell distributions across all successful alignments</h1>
+
+<!-- Summary Statistics -->
+<h2>Summary Statistics</h2>
+<p>Total UMIs: {{ summary_stats.total_umis }}</p>
+<p>Total Cells: {{ summary_stats.total_cells }}</p>
+
+<!-- Distribution of Number of Read-Mates per UMI -->
+<h3>Distribution of Number of Read-Mates per UMI</h3>
+<img src="data:image/png;base64,{{ umi_read_counts_image }}" alt="Distribution of Number of Read-Mates per UMI">
+
+<!-- Distribution of Number of Features per UMI -->
+<h3>Distribution of Number of Features per UMI</h3>
+<img src="data:image/png;base64,{{ umi_feature_counts_image }}" alt="Distribution of Number of Features per UMI">
+
+<!-- Distribution of Number of Read-Mates per Cell -->
+<h3>Distribution of Number of Read-Mates per Cell</h3>
+<img src="data:image/png;base64,{{ cell_read_counts_image }}" alt="Distribution of Number of Read-Mates per Cell">
+
+<!-- Distribution of Number of Unique Features per Cell -->
+<h3>Distribution of Number of Unique Features per Cell</h3>
+<img src="data:image/png;base64,{{ cell_feature_counts_image }}" alt="Distribution of Number of Features per Cell">
+
+<!-- Density Plot of Top Two Feature Ratios per UMI -->
+<h3>Density Plot of Top Feature Ratio over Top Two Features per UMI</h3>
+<img src="data:image/png;base64,{{ top_two_ratio_image }}" alt="Density Plot of Top Feature Ratios">

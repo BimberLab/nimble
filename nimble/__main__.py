@@ -24,7 +24,7 @@ from sys import platform
 from nimble.types import Config
 from nimble.parse import parse_fasta, parse_filter_config, parse_csv
 from nimble.usage import print_usage_and_exit
-from nimble.utils import get_exec_name_from_platform, low_complexity_filter_amount, append_path_string
+from nimble.utils import get_exec_name_from_platform, append_path_string, per_umi_thresholding, umi_intersection
 from nimble.report_generation import generate_plots
 
 ALIGN_TRIES = 10
@@ -49,8 +49,6 @@ def generate(file, opt_file, output_path):
             final_data = collate_data(data, data_opt)
     else:
         final_data = data
-
-    print("Filtered " + str(low_complexity_filter_amount) + " base pairs from reference library.")
 
     # Write reference and default config to disk
     with open(output_path, "w") as f:
@@ -203,28 +201,15 @@ def align(reference, output, input, num_cores, strand_filter, trim):
 
         return align(reference, output, input, num_cores, strand_filter, trim)
 
-def intersect_lists(lists):
-    # Returns the intersection of all lists in a list
-    return list(reduce(set.intersection, map(set, lists)))
-
-def write_empty_df(output):
-    print('No data to parse from input file, writing empty output.')
-    empty_df = pd.DataFrame(columns=['feature', 'count', 'cell_barcode'])
-    empty_df.to_csv(output, sep='\t', index=False, compression='gzip', header=False)
-
-def summarize_fields(df, columns, output_file):
-    summary_df = df.groupby('umi')[columns].agg(lambda x: x.value_counts().to_dict())
-    summary_df = summary_df.applymap(lambda x: '; '.join([f'{k}({v})' for k, v in x.items()]))
-    summary_df.reset_index().to_csv(output_file, sep='\t', index=False)
-
-def report(input, output, summarize_columns_list=None, threshold=0.05):
+def report(input, output, summarize_columns_list=None, threshold=0.05, disable_thresholding=False):
     df = None
 
-    # if the file has data, try to read it. write an empty output and return if there is no data.
+    # If the file has data, try to read it. Write an empty output and return if there is no data.
     if os.path.getsize(input) > 0:
         try:
-            df = pd.read_csv(input, sep='\t', compression='gzip')
-            df.rename(columns={'r1_CB': 'cb', 'r1_UB': 'umi', 'nimble_features': 'features'}, inplace=True) # Use the r1 version of the cb and umi flags
+            df = pd.read_csv(input, sep='\t', compression='gzip', low_memory=False)
+            # Use the r1 version of the cb and umi flags
+            df.rename(columns={'r1_CB': 'cb', 'r1_UB': 'umi', 'nimble_features': 'features'}, inplace=True)
         except pd.errors.EmptyDataError:
             write_empty_df(output)
             return
@@ -238,100 +223,43 @@ def report(input, output, summarize_columns_list=None, threshold=0.05):
         return
 
     # Keep only necessary columns
-    df_init = df
-    df = df[['features', 'umi', 'cb']]
+    df_init = df.copy()
+    df = df[['features', 'umi', 'cb', 'nimble_score']]
 
-    # Drop rows where 'features', 'umi', or 'cb' are null or empty
-    df = df.dropna(subset=['features', 'umi', 'cb'])
+    # Drop rows where 'features', 'umi', 'cb', or 'nimble_score' are null or empty
+    df = df.dropna(subset=['features', 'umi', 'cb', 'nimble_score'])
     df = df[(df['features'] != '') & (df['umi'] != '') & (df['cb'] != '')]
 
-    # Sort ambiguous features into consistent order
-    def sort_features(feature_str):
-        features = feature_str.split(',')
-        return ','.join(sorted(features))
+    # Ensure features are sorted
+    df['features'] = df['features'].apply(lambda x: ','.join(sorted(x.split(','))))
 
-    df['features'] = df['features'].apply(sort_features)
+    # Merge duplicate rows after sorting ambiguous features, summing 'nimble_score'
+    df = df.groupby(['cb', 'umi', 'features'])['nimble_score'].sum().reset_index()
 
-    # Merge duplicate rows after sorting ambiguous features
-    df = df.groupby(['cb', 'umi', 'features']).size().reset_index(name='count')
+    # Apply thresholding algorithm unless disabled
+    if not disable_thresholding:
+        df = per_umi_thresholding(df, threshold)
+    else:
+        df['filtered_features'] = df['features']
 
-    # Per-UMI proportional count assignment and filtration
-    def filter_umi_features(umi_group):
-        counts = []
-        total_counts = 0
-
-        # Initial proportional counts
-        for _, row in umi_group.iterrows():
-            features = row['features'].split(',')
-            count_per_feature = row['count'] / len(features)
-            total_counts += row['count']
-            for feature in features:
-                counts.append((feature, count_per_feature))
-
-        # Aggregate counts per feature
-        feature_counts = pd.DataFrame(counts, columns=['feature', 'count']).groupby('feature')['count'].sum()
-
-        # Iterative filtering
-        while True:
-            feature_ratios = feature_counts / total_counts
-            to_drop = feature_ratios[feature_ratios < threshold].index
-
-            if len(to_drop) == 0:
-                break
-
-            # Reassign counts, excluding filtered features
-            filtered_counts = []
-            total_counts = 0
-
-            for _, row in umi_group.iterrows():
-                features = [f for f in row['features'].split(',') if f not in to_drop]
-                if not features:
-                    continue
-                count_per_feature = row['count'] / len(features)
-                total_counts += row['count']
-                for feature in features:
-                    filtered_counts.append((feature, count_per_feature))
-
-            feature_counts = pd.DataFrame(filtered_counts, columns=['feature', 'count']).groupby('feature')['count'].sum()
-
-        # Return remaining features
-        remaining_features = feature_counts.index.tolist()
-        return ','.join(sorted(remaining_features))
-
-    # Apply UMI filtration
-    filtered_umis = (
-        df.groupby(['cb', 'umi'])
-        .apply(filter_umi_features)
-        .reset_index(name='filtered_features')
-    )
-
-    # Filter out rows where 'filtered_features' is empty
-    filtered_umis = filtered_umis[filtered_umis['filtered_features'] != '']
-
-    # Merge the filtered results back to the main DataFrame on 'cb' and 'umi'
-    df = pd.merge(df, filtered_umis[['cb', 'umi', 'filtered_features']], on=['cb', 'umi'], how='inner')
-
-    df = df[df['filtered_features'] != '']
-
-    # Continue with UMI intersection logic
-    df['filtered_features'] = df['filtered_features'].str.split(',')
-    df_grouped = df.groupby(['cb', 'umi'])['filtered_features'].apply(list)
-    df_grouped = df_grouped.apply(intersect_lists).reset_index()
+    # Apply UMI intersection
+    df_grouped = umi_intersection(df)
 
     # Identify and drop rows with empty intersections
     empty_intersection_rows = df_grouped['filtered_features'].apply(lambda x: len(x) == 0)
     empty_intersection_count = empty_intersection_rows.sum()
-    print(f"Dropped {empty_intersection_count} counts due to empty intersections")
+    print(f"Dropped {empty_intersection_count} UMIs due to empty intersections")
     df_grouped = df_grouped[~empty_intersection_rows]
 
     # Convert intersected features back to strings
     df_grouped['filtered_features'] = df_grouped['filtered_features'].apply(lambda x: ','.join(x))
 
-    # Rename and reorder columns
+    # Rename columns
     df_grouped.columns = ['cell_barcode', 'umi', 'feature']
-    df_counts = df_grouped.groupby(['cell_barcode', 'feature']).size().reset_index()
-    df_counts.columns = ['cell_barcode', 'feature', 'count']
-    df_counts = df_counts.reindex(['feature', 'count', 'cell_barcode'], axis=1)
+
+    # For the final counts, we count the number of UMIs per cell barcode and feature
+    df_counts = df_grouped.groupby(['cell_barcode', 'feature']).size().reset_index(name='count')
+    df_counts = df_counts[['feature', 'count', 'cell_barcode']]
 
     # Write to output file
     df_counts.to_csv(output, sep='\t', index=False, header=False)
@@ -339,6 +267,16 @@ def report(input, output, summarize_columns_list=None, threshold=0.05):
     if summarize_columns_list:
         summary_output = "summarize." + output
         summarize_fields(df_init, summarize_columns_list, summary_output)
+
+def write_empty_df(output):
+    print('No data to parse from input file, writing empty output.')
+    empty_df = pd.DataFrame(columns=['feature', 'count', 'cell_barcode'])
+    empty_df.to_csv(output, sep='\t', index=False, compression='gzip', header=False)
+
+def summarize_fields(df, columns, output_file):
+    summary_df = df.groupby('umi')[columns].agg(lambda x: x.value_counts().to_dict())
+    summary_df = summary_df.applymap(lambda x: '; '.join([f'{k}({v})' for k, v in x.items()]))
+    summary_df.reset_index().to_csv(output_file, sep='\t', index=False)
 
 def sort_input_bam(file_tuple, cores):
     print("Sorting input .bam")
@@ -430,6 +368,12 @@ if __name__ == "__main__":
         type=float, 
         default=0.05
     )
+    report_parser.add_argument(
+        '--disable_thresholding',
+        help='Disable the per-UMI proportional count thresholding algorithm.',
+        action='store_true',
+        default=False
+    )
 
     plot_parser = subparsers.add_parser('plot')
     plot_parser.add_argument('--input_file', help='The nimble counts output file to process.', type=str, required=True)
@@ -445,7 +389,7 @@ if __name__ == "__main__":
         sys.exit(align(args.reference, args.output, args.input, args.num_cores, args.strand_filter, args.trim))
     elif args.subcommand == 'report':
         summarize_columns_list = args.summarize.split(',') if args.summarize else None
-        report(args.input, args.output, summarize_columns_list, args.threshold)
+        report(args.input, args.output, summarize_columns_list, args.threshold, args.disable_thresholding)
 
     elif args.subcommand == 'plot':
         if os.path.getsize(args.input_file) > 0:

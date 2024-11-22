@@ -1,0 +1,79 @@
+<h1>Report for Threshold {{ threshold }}</h1>
+
+<!-- Thresholding Step Analysis -->
+<h2>Thresholding Step (Before UMI Intersection) at Threshold = {{ threshold }}</h2>
+
+<!-- Thresholding Category Counts -->
+<h3>Thresholding Category Counts</h3>
+<img src="data:image/png;base64,{{ threshold_category_counts_image }}" alt="Threshold Category Counts">
+
+<!-- Top Feature Transitions After Thresholding -->
+<h3>Top Feature Transitions After Thresholding</h3>
+<table>
+    <tr>
+        <th>Original Features</th>
+        <th>Post-Threshold Features</th>
+        <th>Count</th>
+    </tr>
+    {% for transition in top_threshold_transitions %}
+    <tr>
+        <td>{{ transition.original_features }}</td>
+        <td>{{ transition.filtered_features }}</td>
+        <td>{{ transition.count }}</td>
+    </tr>
+    {% endfor %}
+</table>
+
+<!-- Top Features Resulting in Zero Passing Hits After Thresholding -->
+<h3>Top Features Resulting in Zero Passing Hits After Thresholding</h3>
+<table>
+    <tr>
+        <th>Original Features</th>
+        <th>Count</th>
+    </tr>
+    {% for feature in top_zero_passing_threshold_features %}
+    <tr>
+        <td>{{ feature.original_features }}</td>
+        <td>{{ feature.count }}</td>
+    </tr>
+    {% endfor %}
+</table>
+
+<!-- Intersection Step Analysis -->
+<h2>Final Report Results (After UMI Intersection) at Threshold = {{ threshold }}</h2>
+
+<!-- Intersection Category Counts -->
+<h3>Intersection Category Counts</h3>
+<img src="data:image/png;base64,{{ intersection_category_counts_image }}" alt="Intersection Category Counts">
+
+<!-- Top Feature Transitions After Intersection -->
+<h3>Top Feature Transitions After Intersection</h3>
+<table>
+    <tr>
+        <th>Original Features</th>
+        <th>Post-Intersection Features</th>
+        <th>Count</th>
+    </tr>
+    {% for transition in top_intersection_transitions %}
+    <tr>
+        <td>{{ transition.original_features }}</td>
+        <td>{{ transition.post_intersection_features }}</td>
+        <td>{{ transition.count }}</td>
+    </tr>
+    {% endfor %}
+</table>
+
+<!-- Top Features Resulting in Zero Passing Hits After Intersection -->
+<h3>Top Features Resulting in Zero Passing Hits After Intersection</h3>
+<table>
+    <tr>
+        <th>Original Features</th>
+        <th>Count</th>
+    </tr>
+    {% for feature in top_zero_passing_features %}
+    <tr>
+        <td>{{ feature.original_features }}</td>
+        <td>{{ feature.count }}</td>
+    </tr>
+    {% endfor %}
+</table>
