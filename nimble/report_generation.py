@@ -303,7 +303,7 @@ def generate_plots_for_feature(df, nimble_feature):
 
         # Compute the number of read-mates expressing the feature per UMI
         # First, group by UMI and count the number of read-mates
-        umi_read_mate_counts = df.groupby('r1_UB').size().reset_index(name='read_mate_count')
+        umi_read_mate_counts = df.groupby('r1_UB')['nimble_score'].sum().reset_index(name='read_mate_count')
 
         # Plot the distribution of read-mate counts per UMI
         fig, ax = plt.subplots(figsize=(8, 6))
@@ -382,7 +382,7 @@ def generate_umi_intersection_reports(df):
     total_cells = df['cb'].nunique()
 
     # Distribution of the number of read-mates per UMI
-    umi_read_counts = df.groupby(['cb', 'umi']).size().reset_index(name='read_mate_count')
+    umi_read_counts = df.groupby(['cb', 'umi'])['nimble_score'].sum().reset_index(name='read_mate_count')
     fig, ax = plt.subplots(figsize=(8, 6))
     sns.histplot(umi_read_counts['read_mate_count'], bins=50, ax=ax)
     ax.set_title('Distribution of Number of Read-Mates per UMI')
@@ -412,7 +412,7 @@ def generate_umi_intersection_reports(df):
     plt.close(fig)
 
     # Distribution of the number of read-mates per cell
-    cell_read_counts = df.groupby(['cb']).size().reset_index(name='read_mate_count')
+    cell_read_counts = df.groupby(['cb'])['nimble_score'].sum().reset_index(name='read_mate_count')
     fig, ax = plt.subplots(figsize=(8, 6))
     sns.histplot(cell_read_counts['read_mate_count'], bins=50, ax=ax)
     ax.set_title('Distribution of Number of Read-Mates per Cell')

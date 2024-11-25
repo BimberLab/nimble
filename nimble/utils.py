@@ -132,12 +132,15 @@ def per_umi_thresholding(df, threshold):
         # Aggregate scores per feature
         feature_scores = pd.DataFrame(counts).groupby('feature')['nimble_score'].sum()
 
+        # Initialize filtered_features_set
+        filtered_features_set = None
+
         # Iterative filtering
         while True:
             # Check to handle empty feature_scores
             if feature_scores.empty:
                 # No features left after filtering
-                filtered_features = ''
+                filtered_features_set = set()
                 break
 
             feature_ratios = feature_scores / total_score
@@ -145,7 +148,7 @@ def per_umi_thresholding(df, threshold):
 
             if len(to_drop) == 0:
                 # No more features to drop
-                filtered_features = ','.join(sorted(feature_scores.index))
+                filtered_features_set = set(feature_scores.index)
                 break
 
             # Reassign scores, excluding filtered features
@@ -164,19 +167,30 @@ def per_umi_thresholding(df, threshold):
             # Check to handle empty filtered_counts
             if not filtered_counts:
                 # No features left after filtering
-                filtered_features = ''
+                filtered_features_set = set()
                 break
 
             feature_scores = pd.DataFrame(filtered_counts).groupby('feature')['nimble_score'].sum()
 
         # Prepare the result DataFrame for this UMI group
         result = umi_group.copy()
-        result['filtered_features'] = filtered_features
+
+        # Ensure filtered_features_set is not None
+        if filtered_features_set is None:
+            filtered_features_set = set()
+
+        # Assign filtered features per read-mate
+        def assign_filtered_features(row):
+            original_features = set(row['features'].split(','))
+            features_to_keep = original_features & filtered_features_set
+            return ','.join(sorted(features_to_keep)) if features_to_keep else ''
+
+        result['filtered_features'] = result.apply(assign_filtered_features, axis=1)
 
         return result[['cb', 'umi', 'features', 'filtered_features']]
 
     # Apply the function to each UMI group
-    filtered_umis = df.groupby(['cb', 'umi']).apply(filter_umi_features).reset_index(drop=True)
+    filtered_umis = df.groupby(['cb', 'umi'], group_keys=False).apply(filter_umi_features).reset_index(drop=True)
 
     # Merge the filtered results back to the main DataFrame on 'cb', 'umi', 'features'
     df = pd.merge(
@@ -196,7 +210,7 @@ def umi_intersection(df):
     df['filtered_features'] = df['filtered_features'].str.split(',')
 
     # Group by cb and umi, collect lists of lists
-    df_grouped = df.groupby(['cb', 'umi'])['filtered_features'].apply(list).reset_index()
+    df_grouped = df.groupby(['cb', 'umi'], group_keys=False)['filtered_features'].apply(list).reset_index()
 
     # Apply intersection to the lists of lists
     df_grouped['filtered_features'] = df_grouped['filtered_features'].apply(intersect_lists)
@@ -206,4 +220,4 @@ def umi_intersection(df):
 def intersect_lists(list_of_lists):
     if not list_of_lists:
         return []
-    return list(set.intersection(*map(set, list_of_lists)))
+    return sorted(set.intersection(*map(set, list_of_lists)))
