@@ -140,14 +140,14 @@ def download(release):
 
 
 # Check if the aligner exists -- if it does, call it with the given parameters.
-def align(reference, output, input, num_cores, strand_filter, trim):
+def align(reference, output, input, num_cores, strand_filter, trim, tmpdir):
     path = os.path.join(os.path.dirname(os.path.realpath(__file__)), "aligner")
     input_ext = os.path.splitext(input[0])[-1].lower()
 
     if os.path.exists(path):
         if input_ext == ".bam":
             split = input[0].rsplit("/", 1)
-            sort_input_bam(split, num_cores)
+            sort_input_bam(split, num_cores, tmpdir)
             input = [split[0] + "/sorted-" + split[1]]
 
         print("Aligning input data to the reference libraries")
@@ -199,7 +199,7 @@ def align(reference, output, input, num_cores, strand_filter, trim):
             print("Error -- could not find or download aligner.")
             sys.exit()
 
-        return align(reference, output, input, num_cores, strand_filter, trim)
+        return align(reference, output, input, num_cores, strand_filter, trim, tmpdir)
 
 def report(input, output, summarize_columns_list=None, threshold=0.05, disable_thresholding=False):
     df = None
@@ -278,9 +278,12 @@ def summarize_fields(df, columns, output_file):
     summary_df = summary_df.applymap(lambda x: '; '.join([f'{k}({v})' for k, v in x.items()]))
     summary_df.reset_index().to_csv(output_file, sep='\t', index=False)
 
-def sort_input_bam(file_tuple, cores):
+def sort_input_bam(file_tuple, cores, tmp_dir):
     print("Sorting input .bam")
-    tmp_dir = os.environ.get("TMPDIR")
+
+    if not tmp_dir:
+        tmp_dir = os.environ.get("TMPDIR")
+
     create_tmp_dir = False
 
     bam = ""
@@ -357,6 +360,7 @@ if __name__ == "__main__":
     align_parser.add_argument('-c', '--num_cores', help='The number of cores to use for alignment.', type=int, default=1)
     align_parser.add_argument('--strand_filter', help='Filter reads based on strand information.', type=str, default="unstranded")
     align_parser.add_argument('--trim', help='Configuration for trimming read-data, in the format <TARGET_LENGTH>:<STRICTNESS>, comma-separated, one entry for each passed library', type=str, default="")
+    align_parser.add_argument('--tmpdir', help='Path to a temporary directory for sorting .bam files', type=str, default=None)
 
     report_parser = subparsers.add_parser('report')
     report_parser.add_argument('-i', '--input', help='The input file.', type=str, required=True)
@@ -386,7 +390,7 @@ if __name__ == "__main__":
     elif args.subcommand == 'generate':
         generate(args.file, args.opt_file, args.output_path)
     elif args.subcommand == 'align':
-        sys.exit(align(args.reference, args.output, args.input, args.num_cores, args.strand_filter, args.trim))
+        sys.exit(align(args.reference, args.output, args.input, args.num_cores, args.strand_filter, args.trim, args.tmpdir))
     elif args.subcommand == 'report':
         summarize_columns_list = args.summarize.split(',') if args.summarize else None
         report(args.input, args.output, summarize_columns_list, args.threshold, args.disable_thresholding)
