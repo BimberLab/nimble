@@ -271,7 +271,7 @@ def report(input, output, summarize_columns_list=None, threshold=0.05, disable_t
 def write_empty_df(output):
     print('No data to parse from input file, writing empty output.')
     empty_df = pd.DataFrame(columns=['feature', 'count', 'cell_barcode'])
-    empty_df.to_csv(output, sep='\t', index=False, header=True)
+    empty_df.to_csv(output, sep='\t', index=False, header=False)
 
 def summarize_fields(df, columns, output_file):
     summary_df = df.groupby('umi')[columns].agg(lambda x: x.value_counts().to_dict())
