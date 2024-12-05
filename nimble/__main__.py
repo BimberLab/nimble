@@ -207,7 +207,7 @@ def report(input, output, summarize_columns_list=None, threshold=0.05, disable_t
     # If the file has data, try to read it. Write an empty output and return if there is no data.
     if os.path.getsize(input) > 0:
         try:
-            df = pd.read_csv(input, sep='\t', compression='gzip', low_memory=False)
+            df = pd.read_csv(input, sep='\t', low_memory=False)
             # Use the r1 version of the cb and umi flags
             df.rename(columns={'r1_CB': 'cb', 'r1_UB': 'umi', 'nimble_features': 'features'}, inplace=True)
         except pd.errors.EmptyDataError:
@@ -271,7 +271,7 @@ def report(input, output, summarize_columns_list=None, threshold=0.05, disable_t
 def write_empty_df(output):
     print('No data to parse from input file, writing empty output.')
     empty_df = pd.DataFrame(columns=['feature', 'count', 'cell_barcode'])
-    empty_df.to_csv(output, sep='\t', index=False, compression='gzip', header=False)
+    empty_df.to_csv(output, sep='\t', index=False, header=True)
 
 def summarize_fields(df, columns, output_file):
     summary_df = df.groupby('umi')[columns].agg(lambda x: x.value_counts().to_dict())
@@ -399,7 +399,7 @@ if __name__ == "__main__":
         if os.path.getsize(args.input_file) > 0:
             try:
                 print(f"Loading alignment data from {args.input_file}")
-                df = pd.read_csv(args.input_file, sep='\t', compression='gzip', low_memory=False)
+                df = pd.read_csv(args.input_file, sep='\t', low_memory=False)
                 generate_plots(df, args.output_file)
             except pd.errors.EmptyDataError:
                 print("Input file is empty.")
