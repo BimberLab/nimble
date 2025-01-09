@@ -23,4 +23,4 @@ requests==2.32.2
 seaborn==0.13.2
 six==1.15.0
 urllib3==1.26.19
-zipp==3.18.1
+zipp==3.19.1
