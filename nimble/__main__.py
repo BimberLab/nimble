@@ -18,6 +18,7 @@ import numpy as np
 from collections import Counter
 from functools import reduce
 from importlib.metadata import version as get_version 
+import gzip
 
 from sys import platform
 
@@ -30,6 +31,14 @@ from nimble.report_generation import generate_plots
 ALIGN_TRIES = 10
 ALIGN_TRIES_THRESHOLD = 0
 
+def validate_gzip(file_path):
+    try:
+        with gzip.open(file_path, 'rb') as f:
+            while f.read(1024):  # Read in chunks to validate
+                pass
+        print(f"GZIP validation successful for {file_path}")
+    except Exception as e:
+        print(f"GZIP validation failed for {file_path}: {e}")
 
 # Generate and write human-editable config json files to disk. Input data is a CSV, FASTA, or both
 def generate(file, opt_file, output_path):
@@ -176,6 +185,9 @@ def align(reference, output, input, num_cores, strand_filter, trim, tmpdir):
         proc = subprocess.Popen([path] + processed_param_list)
         proc.wait()
 
+        for out_file in output.split(','):
+            validate_gzip(out_file)
+
         return_code = proc.returncode
 
         if input_ext == ".bam" and return_code == 0:
@@ -203,6 +215,8 @@ def align(reference, output, input, num_cores, strand_filter, trim, tmpdir):
 
 def report(input, output, summarize_columns_list=None, threshold=0.05, disable_thresholding=False):
     df = None
+    
+    validate_gzip(input)
 
     # If the file has data, try to read it. Write an empty output and return if there is no data.
     if os.path.getsize(input) > 0:
