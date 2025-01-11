@@ -54,7 +54,7 @@ def parse_alignment_results(input_path):
             metadata.append(line.split("\t")[1:])
 
     names = [i for i in range(0, max_line_len)]
-    return (pd.read_csv(StringIO(str_rep), header=None, names=names, quoting=csv.QUOTE_NONE), metadata)
+    return (pd.read_csv(StringIO(str_rep), header=None, names=names, quoting=csv.QUOTE_NONE, lineterminator='\n'), metadata)
 
 
 # Parse the reference.json format for the list of filters and their configurations
