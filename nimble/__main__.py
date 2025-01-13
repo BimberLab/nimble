@@ -221,7 +221,7 @@ def report(input, output, summarize_columns_list=None, threshold=0.05, disable_t
     # If the file has data, try to read it. Write an empty output and return if there is no data.
     if os.path.getsize(input) > 0:
         try:
-            df = pd.read_csv(input, sep='\t', low_memory=False)
+            df = pd.read_csv(input, sep='\t', low_memory=False, quoting=csv.QUOTE_NONE, engine='python')
             # Use the r1 version of the cb and umi flags
             df.rename(columns={'r1_CB': 'cb', 'r1_UB': 'umi', 'nimble_features': 'features'}, inplace=True)
         except pd.errors.EmptyDataError:
@@ -413,7 +413,7 @@ if __name__ == "__main__":
         if os.path.getsize(args.input_file) > 0:
             try:
                 print(f"Loading alignment data from {args.input_file}")
-                df = pd.read_csv(args.input_file, sep='\t', low_memory=False)
+                df = pd.read_csv(args.input_file, sep='\t', low_memory=False, quoting=csv.QUOTE_NONE, engine='python')
                 generate_plots(df, args.output_file)
             except pd.errors.EmptyDataError:
                 print("Input file is empty.")
