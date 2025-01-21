@@ -174,6 +174,7 @@ def per_umi_thresholding(df, threshold):
 
         # Prepare the result DataFrame for this UMI group
         result = umi_group.copy()
+        result['filtered_features'] = ''
 
         # Ensure filtered_features_set is not None
         if filtered_features_set is None:

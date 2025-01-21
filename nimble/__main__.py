@@ -185,9 +185,6 @@ def align(reference, output, input, num_cores, strand_filter, trim, tmpdir):
         proc = subprocess.Popen([path] + processed_param_list)
         proc.wait()
 
-        for out_file in output.split(','):
-            validate_gzip(out_file)
-
         return_code = proc.returncode
 
         if input_ext == ".bam" and return_code == 0:
@@ -216,8 +213,6 @@ def align(reference, output, input, num_cores, strand_filter, trim, tmpdir):
 def report(input, output, summarize_columns_list=None, threshold=0.05, disable_thresholding=False):
     df = None
     
-    validate_gzip(input)
-
     # If the file has data, try to read it. Write an empty output and return if there is no data.
     if os.path.getsize(input) > 0:
         try:
