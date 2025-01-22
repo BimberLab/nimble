@@ -245,6 +245,11 @@ def report(input, output, summarize_columns_list=None, threshold=0.05, disable_t
     # Merge duplicate rows after sorting ambiguous features, summing 'nimble_score'
     df = df.groupby(['cb', 'umi', 'features'])['nimble_score'].sum().reset_index()
 
+    # If the file is not empty but the DataFrame is after filtering, write an empty output
+    if df.empty:
+        write_empty_df(output)
+        return
+
     # Apply thresholding algorithm unless disabled
     if not disable_thresholding:
         df = per_umi_thresholding(df, threshold)
