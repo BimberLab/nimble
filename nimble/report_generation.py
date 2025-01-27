@@ -342,6 +342,14 @@ def generate_plots_for_feature(df, nimble_feature):
 def generate_plots(df, output_file):
     reports = []
 
+    # Guard against empty r1_UB
+    df = df.dropna(subset=['r1_UB'])
+    df = df[(df['r1_UB'] != '')]
+
+    if df.empty:
+        print("Dataframe empty after filtration, skipping plot.")
+        return
+
     # First, generate the per-UMI intersection pages
     umi_reports = generate_umi_intersection_reports(df)
     reports.extend(umi_reports)
