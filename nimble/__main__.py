@@ -347,7 +347,7 @@ def sort_input_bam(bam, cores, tmp_dir):
     with open(sorted_bam_done, 'w') as fp:
         pass
 
-    if not os.path.exists(sorted_bam_done)
+    if not os.path.exists(sorted_bam_done):
         raise RuntimeError("unable to create BAM done_file")
 
     return sorted_bam
