@@ -155,9 +155,7 @@ def align(reference, output, input, num_cores, strand_filter, trim, tmpdir):
 
     if os.path.exists(path):
         if input_ext == ".bam":
-            split = input[0].rsplit("/", 1)
-            sort_input_bam(split, num_cores, tmpdir)
-            input = [split[0] + "/sorted-" + split[1]]
+            input = sort_input_bam(input[0], num_cores, tmpdir)
 
         print("Aligning input data to the reference libraries")
         sys.stdout.flush()
@@ -292,43 +290,41 @@ def summarize_fields(df, columns, output_file):
     summary_df = summary_df.applymap(lambda x: '; '.join([f'{k}({v})' for k, v in x.items()]))
     summary_df.reset_index().to_csv(output_file, sep='\t', index=False)
 
-def sort_input_bam(file_tuple, cores, tmp_dir):
-    print("Sorting input .bam")
+def sort_input_bam(bam, cores, tmp_dir):
+    print("Sorting input bam")
 
     if not tmp_dir:
         tmp_dir = os.environ.get("TMPDIR")
 
-    create_tmp_dir = False
+    created_tmp_dir = False
 
-    bam = ""
-    sorted_bam = ""
-
-    if len(file_tuple) > 1:
-        bam = file_tuple[0] + "/" + file_tuple[1]
-        sorted_bam = file_tuple[0] + "/sorted-" + file_tuple[1]
+    if tmp_dir:
+        samtools_tmp = os.path.join(tmp_dir, "samtools_tmp")
     else:
-        bam = file_tuple[0]
-        sorted_bam = "./sorted-" + file_tuple[0]
+        samtools_tmp = None
+
+    sorted_bam = os.path.join(tmp_dir, "sorted-" + os.path.basename(bam))
+    sorted_bam_done = sorted_bam + ".done"
 
     print("Sorting " + bam + " Outputting to " + sorted_bam)
     sys.stdout.flush()
 
-    if os.path.isfile(sorted_bam):
+    if os.path.exists(sorted_bam_done):
         print("Sorted bam file already exists, skipping the sorting step.")
         sys.stdout.flush()
-        return
+        return sorted_bam
 
-    if tmp_dir and not os.path.exists(tmp_dir):
+    if tmp_dir and not os.path.exists(samtools_tmp):
         try:
-            os.makedirs(tmp_dir)
-            create_tmp_dir = True
-            print(f"Created temporary directory {tmp_dir}")
+            os.makedirs(samtools_tmp)
+            created_tmp_dir = True
+            print(f"Created temporary directory {samtools_tmp}")
         except OSError as e:
-            print(f"Could not create temporary directory {tmp_dir}: {e}")
+            print(f"Could not create temporary directory {samtools_tmp}: {e}")
             sys.stdout.flush()
 
     if tmp_dir:
-        pysam.sort('-t', 'UR', '-n', '-o', sorted_bam, '-@', str(cores), '-T', tmp_dir, bam)
+        pysam.sort('-t', 'UR', '-n', '-o', sorted_bam, '-@', str(cores), '-T', samtools_tmp, bam)
     else:
         pysam.sort('-t', 'UR', '-n', '-o', sorted_bam, '-@', str(cores), bam)
 
@@ -337,13 +333,22 @@ def sort_input_bam(file_tuple, cores, tmp_dir):
     if (sort_log):
         print("samtools messages: " + sort_log)
         
-    if create_tmp_dir:
+    if created_tmp_dir:
         try:
-            shutil.rmtree(tmp_dir)
-            print(f"Deleted temporary directory {tmp_dir}")
+            shutil.rmtree(samtools_tmp)
+            print(f"Deleted samtools temporary directory {samtools_tmp}")
         except Exception as e:
-            print(f"Could not delete temporary directory {tmp_dir}: {e}")
-        sys.stdout.flush() 
+            print(f"Could not delete temporary directory {samtools_tmp}: {e}")
+        sys.stdout.flush()
+
+    # Note: this allows the code to know if sorting completed successfully, as opposed to dying in the middle
+    with open(sorted_bam_done, 'w') as fp:
+        pass
+
+    if not os.path.exists(sorted_bam_done)
+        raise RuntimeError("unable to create BAM done_file")
+
+    return sorted_bam
 
 
 if __name__ == "__main__":
