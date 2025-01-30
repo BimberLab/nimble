@@ -132,3 +132,6 @@ dmypy.json
 *.json
 *.tsv
 aligner
+
+# Intellij
+.idea/*

@@ -151,54 +151,8 @@ def download(release):
 # Check if the aligner exists -- if it does, call it with the given parameters.
 def align(reference, output, input, num_cores, strand_filter, trim, tmpdir):
     path = os.path.join(os.path.dirname(os.path.realpath(__file__)), "aligner")
-    input_ext = os.path.splitext(input[0])[-1].lower()
 
-    if os.path.exists(path):
-        if input_ext == ".bam":
-            split = input[0].rsplit("/", 1)
-            sort_input_bam(split, num_cores, tmpdir)
-            input = [split[0] + "/sorted-" + split[1]]
-
-        print("Aligning input data to the reference libraries")
-        sys.stdout.flush()
-
-        library_list = reference.split(",")
-
-        processed_param_list = []
-        for input_file in input:
-            processed_param_list.extend(["--input", input_file])
-        processed_param_list.extend(["-c", str(num_cores), "--strand_filter", strand_filter])
-
-        for library in library_list:
-            out_file_append = ""
-
-            if len(library_list) > 1:
-                out_file_append = "." + os.path.splitext(os.path.basename(library))[0]
-
-            processed_param_list.extend(["-r", library, "-o", append_path_string(output, out_file_append)])
-
-        if trim != "":
-            processed_param_list.extend(["-t", trim])
-
-        print(processed_param_list)
-
-        proc = subprocess.Popen([path] + processed_param_list)
-        proc.wait()
-
-        return_code = proc.returncode
-
-        if input_ext == ".bam" and return_code == 0:
-            print("Deleting intermediate sorted .bam file")
-
-            try:
-                os.remove(input[0])
-            except Exception as e:
-                print(f"Error when attempting to delete sorted .bam file: {e}")
-        else:
-            print("Retaining all input files.")
-
-        return return_code
-    else:
+    if not os.path.exists(path):
         print("No aligner found. Attempting to download the latest release.\n")
         download([])
 
@@ -209,6 +163,52 @@ def align(reference, output, input, num_cores, strand_filter, trim, tmpdir):
             sys.exit()
 
         return align(reference, output, input, num_cores, strand_filter, trim, tmpdir)
+
+    print("Aligning input data to the reference libraries")
+    sys.stdout.flush()
+
+    input_ext = os.path.splitext(input[0])[-1].lower()
+    should_delete_input = False
+    if input_ext == ".bam":
+        input[0] = sort_input_bam(input[0], num_cores, tmpdir)
+        should_delete_input = True
+
+    processed_param_list = []
+    for input_file in input:
+        processed_param_list.extend(["--input", input_file])
+    processed_param_list.extend(["-c", str(num_cores), "--strand_filter", strand_filter])
+
+    library_list = reference.split(",")
+    for library in library_list:
+        out_file_append = ""
+
+        if len(library_list) > 1:
+            out_file_append = "." + os.path.splitext(os.path.basename(library))[0]
+
+        processed_param_list.extend(["-r", library, "-o", append_path_string(output, out_file_append)])
+
+    if trim != "":
+        processed_param_list.extend(["-t", trim])
+
+    print(processed_param_list)
+
+    proc = subprocess.Popen([path] + processed_param_list)
+    proc.wait()
+
+    return_code = proc.returncode
+
+    if should_delete_input and return_code == 0:
+        print("Deleting intermediate sorted .bam file")
+
+        try:
+            os.remove(input[0])
+            os.remove(input[0] + ".done")
+        except Exception as e:
+            print(f"Error when attempting to delete sorted .bam file: {e}")
+    else:
+        print("Retaining all input files.")
+
+    return return_code
 
 def report(input, output, summarize_columns_list=None, threshold=0.05, disable_thresholding=False):
     df = None
@@ -292,43 +292,41 @@ def summarize_fields(df, columns, output_file):
     summary_df = summary_df.applymap(lambda x: '; '.join([f'{k}({v})' for k, v in x.items()]))
     summary_df.reset_index().to_csv(output_file, sep='\t', index=False)
 
-def sort_input_bam(file_tuple, cores, tmp_dir):
-    print("Sorting input .bam")
+def sort_input_bam(bam, cores, tmp_dir):
+    print("Sorting input bam")
 
     if not tmp_dir:
         tmp_dir = os.environ.get("TMPDIR")
 
-    create_tmp_dir = False
+    created_tmp_dir = False
 
-    bam = ""
-    sorted_bam = ""
-
-    if len(file_tuple) > 1:
-        bam = file_tuple[0] + "/" + file_tuple[1]
-        sorted_bam = file_tuple[0] + "/sorted-" + file_tuple[1]
+    if tmp_dir:
+        samtools_tmp = os.path.join(tmp_dir, "samtools_tmp")
     else:
-        bam = file_tuple[0]
-        sorted_bam = "./sorted-" + file_tuple[0]
+        samtools_tmp = None
+
+    sorted_bam = os.path.join(tmp_dir, "sorted-" + os.path.basename(bam))
+    sorted_bam_done = sorted_bam + ".done"
 
     print("Sorting " + bam + " Outputting to " + sorted_bam)
     sys.stdout.flush()
 
-    if os.path.isfile(sorted_bam):
+    if os.path.exists(sorted_bam_done):
         print("Sorted bam file already exists, skipping the sorting step.")
         sys.stdout.flush()
-        return
+        return sorted_bam
 
-    if tmp_dir and not os.path.exists(tmp_dir):
+    if tmp_dir and not os.path.exists(samtools_tmp):
         try:
-            os.makedirs(tmp_dir)
-            create_tmp_dir = True
-            print(f"Created temporary directory {tmp_dir}")
+            os.makedirs(samtools_tmp)
+            created_tmp_dir = True
+            print(f"Created temporary directory {samtools_tmp}")
         except OSError as e:
-            print(f"Could not create temporary directory {tmp_dir}: {e}")
+            print(f"Could not create temporary directory {samtools_tmp}: {e}")
             sys.stdout.flush()
 
     if tmp_dir:
-        pysam.sort('-t', 'UR', '-n', '-o', sorted_bam, '-@', str(cores), '-T', tmp_dir, bam)
+        pysam.sort('-t', 'UR', '-n', '-o', sorted_bam, '-@', str(cores), '-T', samtools_tmp, bam)
     else:
         pysam.sort('-t', 'UR', '-n', '-o', sorted_bam, '-@', str(cores), bam)
 
@@ -337,13 +335,22 @@ def sort_input_bam(file_tuple, cores, tmp_dir):
     if (sort_log):
         print("samtools messages: " + sort_log)
         
-    if create_tmp_dir:
+    if created_tmp_dir:
         try:
-            shutil.rmtree(tmp_dir)
-            print(f"Deleted temporary directory {tmp_dir}")
+            shutil.rmtree(samtools_tmp)
+            print(f"Deleted samtools temporary directory {samtools_tmp}")
         except Exception as e:
-            print(f"Could not delete temporary directory {tmp_dir}: {e}")
-        sys.stdout.flush() 
+            print(f"Could not delete temporary directory {samtools_tmp}: {e}")
+        sys.stdout.flush()
+
+    # Note: this allows the code to know if sorting completed successfully, as opposed to dying in the middle
+    with open(sorted_bam_done, 'w') as fp:
+        pass
+
+    if not os.path.exists(sorted_bam_done)
+        raise RuntimeError("unable to create BAM done_file")
+
+    return sorted_bam
 
 
 if __name__ == "__main__":
