@@ -151,52 +151,8 @@ def download(release):
 # Check if the aligner exists -- if it does, call it with the given parameters.
 def align(reference, output, input, num_cores, strand_filter, trim, tmpdir):
     path = os.path.join(os.path.dirname(os.path.realpath(__file__)), "aligner")
-    input_ext = os.path.splitext(input[0])[-1].lower()
 
-    if os.path.exists(path):
-        if input_ext == ".bam":
-            input = sort_input_bam(input[0], num_cores, tmpdir)
-
-        print("Aligning input data to the reference libraries")
-        sys.stdout.flush()
-
-        library_list = reference.split(",")
-
-        processed_param_list = []
-        for input_file in input:
-            processed_param_list.extend(["--input", input_file])
-        processed_param_list.extend(["-c", str(num_cores), "--strand_filter", strand_filter])
-
-        for library in library_list:
-            out_file_append = ""
-
-            if len(library_list) > 1:
-                out_file_append = "." + os.path.splitext(os.path.basename(library))[0]
-
-            processed_param_list.extend(["-r", library, "-o", append_path_string(output, out_file_append)])
-
-        if trim != "":
-            processed_param_list.extend(["-t", trim])
-
-        print(processed_param_list)
-
-        proc = subprocess.Popen([path] + processed_param_list)
-        proc.wait()
-
-        return_code = proc.returncode
-
-        if input_ext == ".bam" and return_code == 0:
-            print("Deleting intermediate sorted .bam file")
-
-            try:
-                os.remove(input[0])
-            except Exception as e:
-                print(f"Error when attempting to delete sorted .bam file: {e}")
-        else:
-            print("Retaining all input files.")
-
-        return return_code
-    else:
+    if not os.path.exists(path):
         print("No aligner found. Attempting to download the latest release.\n")
         download([])
 
@@ -207,6 +163,52 @@ def align(reference, output, input, num_cores, strand_filter, trim, tmpdir):
             sys.exit()
 
         return align(reference, output, input, num_cores, strand_filter, trim, tmpdir)
+
+    print("Aligning input data to the reference libraries")
+    sys.stdout.flush()
+
+    input_ext = os.path.splitext(input[0])[-1].lower()
+    should_delete_input = False
+    if input_ext == ".bam":
+        input[0] = sort_input_bam(input[0], num_cores, tmpdir)
+        should_delete_input = True
+
+    processed_param_list = []
+    for input_file in input:
+        processed_param_list.extend(["--input", input_file])
+    processed_param_list.extend(["-c", str(num_cores), "--strand_filter", strand_filter])
+
+    library_list = reference.split(",")
+    for library in library_list:
+        out_file_append = ""
+
+        if len(library_list) > 1:
+            out_file_append = "." + os.path.splitext(os.path.basename(library))[0]
+
+        processed_param_list.extend(["-r", library, "-o", append_path_string(output, out_file_append)])
+
+    if trim != "":
+        processed_param_list.extend(["-t", trim])
+
+    print(processed_param_list)
+
+    proc = subprocess.Popen([path] + processed_param_list)
+    proc.wait()
+
+    return_code = proc.returncode
+
+    if should_delete_input and return_code == 0:
+        print("Deleting intermediate sorted .bam file")
+
+        try:
+            os.remove(input[0])
+            os.remove(input[0] + ".done")
+        except Exception as e:
+            print(f"Error when attempting to delete sorted .bam file: {e}")
+    else:
+        print("Retaining all input files.")
+
+    return return_code
 
 def report(input, output, summarize_columns_list=None, threshold=0.05, disable_thresholding=False):
     df = None
