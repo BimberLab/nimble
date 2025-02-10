@@ -9,29 +9,33 @@ RUN sed -i s/mirror.centos.org/vault.centos.org/g /etc/yum.repos.d/*.repo && \
 RUN yum update -y
 
 # Set proper encoding for pip 20.2+
-ENV LANG en_US.utf8
-ENV LC_ALL en_US.utf8
+ENV LANG=en_US.utf8
+ENV LC_ALL=en_US.utf8
 
-# Install python3, pip, and dependencies
+# Install developer tools and dependencies
 RUN yum group install -y "Development Tools" && \
-    yum install -y ncurses-devel bzip2-devel xz-devel zlib-devel wget glibc-devel python3-devel openssl11-devel epel-release.noarch libffi-devel centos-release-scl devtoolset-8 && \
-    scl enable devtoolset-8 bash &&\
-    wget https://openssl.org/source/openssl-1.1.1k.tar.gz && \
+    yum install -y ncurses-devel bzip2-devel xz-devel zlib-devel wget glibc-devel python3-devel \
+                   openssl11-devel epel-release.noarch libffi-devel centos-release-scl devtoolset-8
+
+# Install OpenSSL 1.1.1k
+RUN wget https://openssl.org/source/openssl-1.1.1k.tar.gz && \
     tar -xzvf openssl-1.1.1k.tar.gz && \
-    cd openssl-1.1.1k && \ 
-    ./config --prefix=/usr --openssldir=/etc/ssl --libdir=lib no-shared zlib-dynamic && \ 
+    cd openssl-1.1.1k && \
+    ./config --prefix=/usr --openssldir=/etc/ssl --libdir=lib no-shared zlib-dynamic && \
     make && \
-    make install && \
-    cd ~ && \ 
-    wget https://www.python.org/ftp/python/3.9.6/Python-3.9.6.tgz && \
+    make install
+
+# Install Python 3.9.6 with OpenSSL 1.1.1 support
+RUN wget https://www.python.org/ftp/python/3.9.6/Python-3.9.6.tgz && \
     tar xzf Python-3.9.6.tgz && \
     cd Python-3.9.6 && \
     sed -i 's/PKG_CONFIG openssl /PKG_CONFIG openssl11 /g' configure && \
     ./configure --enable-optimizations && \
     make install && \
-    pip3 install --upgrade pip && \
-    yum clean all && \
-    rm -rf /var/cache/yum
+    pip3 install --upgrade pip
+
+# Clean up
+RUN yum clean all && rm -rf /var/cache/yum
 
 # Install samtools and create tmp folders:
 RUN cd /tmp &&\
@@ -48,6 +52,8 @@ RUN cd /tmp &&\
 # NOTE: this is required when running as non-root. Setting MPLCONFIGDIR removes a similar warning.
 ENV NUMBA_CACHE_DIR=/numba_cache
 ENV MPLCONFIGDIR=/mpl_cache
+ENV CFLAGS="-std=c99 -D_XOPEN_SOURCE=700 -D_GNU_SOURCE"
+ENV LDFLAGS="-lrt"
 
 # Install nimble
 ADD . /nimble
