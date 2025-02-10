@@ -28,7 +28,7 @@ RUN yum group install -y "Development Tools" && \
     sed -i 's/PKG_CONFIG openssl /PKG_CONFIG openssl11 /g' configure && \
     ./configure --enable-optimizations && \
     make install && \
-    pip3 install --upgrade pip \
+    pip3 install --upgrade pip && \
     yum clean all && \
     rm -rf /var/cache/yum
 
