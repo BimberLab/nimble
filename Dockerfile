@@ -14,7 +14,8 @@ ENV LC_ALL en_US.utf8
 
 # Install python3, pip, and dependencies
 RUN yum group install -y "Development Tools" && \
-    yum install -y ncurses-devel bzip2-devel xz-devel zlib-devel wget glibc-devel python3-devel openssl11-devel epel-release.noarch libffi-devel && \
+    yum install -y ncurses-devel bzip2-devel xz-devel zlib-devel wget glibc-devel python3-devel openssl11-devel epel-release.noarch libffi-devel centos-release-scl devtoolset-8 && \
+    scl enable devtoolset-8 bash &&\
     wget https://openssl.org/source/openssl-1.1.1k.tar.gz && \
     tar -xzvf openssl-1.1.1k.tar.gz && \
     cd openssl-1.1.1k && \ 
