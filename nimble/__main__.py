@@ -191,7 +191,6 @@ def align(reference, output, input, num_cores, strand_filter, trim, tmpdir):
         processed_param_list.extend(["-t", trim])
 
     print(processed_param_list)
-
     proc = subprocess.Popen([path] + processed_param_list)
     proc.wait()
 
@@ -295,8 +294,7 @@ def summarize_fields(df, columns, output_file):
 def sort_input_bam(bam, cores, tmp_dir):
     print("Sorting input bam")
 
-    if not tmp_dir:
-        tmp_dir = os.environ.get("TMPDIR")
+    tmp_dir = tmp_dir or os.environ.get("TMPDIR") or ""
 
     created_tmp_dir = False
 
@@ -334,6 +332,7 @@ def sort_input_bam(bam, cores, tmp_dir):
 
     if (sort_log):
         print("samtools messages: " + sort_log)
+        sys.stdout.flush()
         
     if created_tmp_dir:
         try:
