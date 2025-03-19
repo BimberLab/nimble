@@ -1,50 +1,40 @@
 # nimble
-nimble is a fast, accurate, and configurable RNA sequence alignment tool that executes lightweight alignments on arbitrary reference libraries. It uses pseudo-alignment to rapidly generate supplemental calls to complement a data pipeline's primary alignment. It does this with low overhead, making it possible to run supplemental alignments on almost any machine.
+nimble is a lightweight tool designed to supplement standard RNA-seq and scRNA-seq pipelines by providing accurate gene quantification with customizable reference libraries. Traditional transcript quantification methods align reads to a single reference genome and apply a uniform feature-calling approach across all genes. While effective in most cases, this method can introduce systematic inaccuracies, particularly for complex or highly variable gene families such as MHC and KIR, where standard approaches may result in misalignment, lost counts, or incorrect feature assignments. Nimble addresses these gaps by allowing you to define custom gene spaces with configurable scoring criteria, ensuring more accurate and biologically relevant quantification.
 
+![nimble_scrnaseq_pipeline](https://github.com/user-attachments/assets/baaa4015-0f4b-4c6e-bc9f-8155af4cd72b)
+
+# Documentation
+For installation instructions, [see below](#installation). Detailed documentation, including [usage instructions](https://github.com/BimberLab/nimble/wiki/Quickstart) and [a custom reference library vignette](https://github.com/BimberLab/nimble/wiki/HLA-Vignette), can be found at the [wiki](https://github.com/BimberLab/nimble/wiki).
+
+# Support
+Please [open an issue](https://github.com/BimberLab/nimble/issues/new) on this repository for feature requests, support for additional operating systems, bugfixes, or questions.
 
 # Installation
+The best way to install nimble is via our [Docker image](https://github.com/BimberLab/nimble/pkgs/container/nimble).
 
-nimble requires Python 3 and [samtools](http://www.htslib.org/). It supports the following operating systems:
+To install the latest nimble Docker image, run:
 
-- Ubuntu
-- CentOS 7
-- Manjaro
+`docker pull ghcr.io/bimberlab/nimble:latest`
 
-To install nimble, run the following command:
+Alternatively, you can install nimble through pip. Nimble requires Python 3 and [samtools](http://www.htslib.org/). Currently, we support the following operating systems:
+
+- MacOS
+- Linux distributions with [musl](https://musl.libc.org/) support, i.e. Alpine and Debian/Ubuntu with the `musl` package, etc.
+
+To install nimble with pip, run:
 
 `pip install git+https://github.com/BimberLab/nimble`
 
-There is also a [docker image](https://github.com/BimberLab/nimble/pkgs/container/nimble).
+Once you have nimble installed, proceed to our [usage documentation](https://github.com/BimberLab/nimble/wiki/Quickstart).
 
-
-# Usage
-Here's an example of generating a library and using it in an alignment, for both .bam and .fastq.gz inputs:
-```
-nimble generate --file lib.csv --opt-file lib.fasta --output_path lib.json
-
-nimble align --reference lib.json,lib2.json,lib3.json --output out.tsv --input data.bam --alignment_path log.tsv.gz --log log.txt --num_cores 8 --strand_filter fiveprime
-
-nimble align --reference lib.json,lib2.json,lib3.json --output out.tsv --input data_r1_fastq.gz data_r2_fastq.gz --alignment_path log.tsv.gz --log log.txt --num_cores 8 --strand_filter unstranded
-```
-
-A library is comprised of an input csv or fasta, or both.
-`nimble align` can take one or more libraries via the `--reference` flag in a CSV string. Every other file will be generated per-library, and the library name will be appended to the filename root. For instance, in this case, the `--output` files will be `out-lib.tsv`, `out-lib2.tsv`, and `out-lib3.tsv`.
-
-# Documentation
-
-Detailed documentation can be found at the [wiki](https://github.com/BimberLab/nimble/wiki).
-
+# Other resources
 The source code for the backend aligner can be found [here](https://github.com/BimberLab/nimble-aligner).
 
+# References and Credits
+[rust-pseudoaligner](https://github.com/10XGenomics/rust-pseudoaligner)
 
-
-# Issues
-
-To report a bug, ask a question, or request support for a new operating system, please create an [issue](https://github.com/BimberLab/nimble/issues) in this repository.
-
-
-# References
+[Samtools and HTSlib](www.htslib.org)
 
 [Köster, J. (2016). Rust-Bio: a fast and safe bioinformatics library. Bioinformatics, 32(3), 444-446.](http://bioinformatics.oxfordjournals.org/content/early/2015/10/06/bioinformatics.btv573.short?rss=1)
 
-[rust-pseudoaligner](https://github.com/10XGenomics/rust-pseudoaligner)
+[Cock, P.J. et al. (2009). Biopython: freely available Python tools for computational molecular biology and bioinformatics. Bioinformatics, 25(11), pp.1422–1423.](https://pmc.ncbi.nlm.nih.gov/articles/PMC2682512/)
