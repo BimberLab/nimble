@@ -29,6 +29,7 @@ Once you have nimble installed, proceed to our [usage documentation](https://git
 
 # Other resources
 The source code for the backend aligner can be found [here](https://github.com/BimberLab/nimble-aligner).
+The [nimbler](https://github.com/BimberLab/nimbleR) package contains R routines for integrating nimble data into a Seurat object.
 
 # References and Credits
 [rust-pseudoaligner](https://github.com/10XGenomics/rust-pseudoaligner)
