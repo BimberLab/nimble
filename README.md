@@ -4,7 +4,7 @@ nimble is a lightweight tool designed to supplement standard RNA-seq and scRNA-s
 ![nimble_scrnaseq_pipeline](https://github.com/user-attachments/assets/baaa4015-0f4b-4c6e-bc9f-8155af4cd72b)
 
 # Documentation
-For installation instructions, [see below](#installation). Detailed documentation, including [usage instructions](https://github.com/BimberLab/nimble/wiki/Quickstart) and [a custom reference library vignette](https://github.com/BimberLab/nimble/wiki/HLA-Vignette), can be found at the [wiki](https://github.com/BimberLab/nimble/wiki).
+For installation instructions, [see below](#installation). Detailed documentation, including [usage instructions](https://github.com/BimberLab/nimble/wiki/Quickstart) and [a custom HLA reference vignette](https://github.com/BimberLab/nimble/wiki/HLA-Vignette), can be found at the [wiki](https://github.com/BimberLab/nimble/wiki).
 
 # Support
 Please [open an issue](https://github.com/BimberLab/nimble/issues/new) on this repository for feature requests, support for additional operating systems, bugfixes, or questions.
