@@ -28,9 +28,9 @@ To install nimble with pip, run:
 Once you have nimble installed, proceed to our [usage documentation](https://github.com/BimberLab/nimble/wiki/Quickstart).
 
 # Other resources
-- The source code for the backend aligner can be found [here](https://github.com/BimberLab/nimble-aligner).
-
 - The [nimbler](https://github.com/BimberLab/nimbleR) package contains R routines for integrating nimble data into a Seurat object.
+
+- The source code for the backend aligner can be found [here](https://github.com/BimberLab/nimble-aligner).
 
 # References and Credits
 [rust-pseudoaligner](https://github.com/10XGenomics/rust-pseudoaligner)
