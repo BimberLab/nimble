@@ -209,26 +209,30 @@ def align(reference, output, input, num_cores, strand_filter, trim, tmpdir):
 
     return return_code
 
-def report(input, output, summarize_columns_list=None, threshold=0.05, disable_thresholding=False):
+def check_df_from_input(input, output):
     df = None
-    
+
     # If the file has data, try to read it. Write an empty output and return if there is no data.
     if os.path.getsize(input) > 0:
         try:
             df = pd.read_csv(input, sep='\t', quoting=csv.QUOTE_NONE, engine='python')
-            # Use the r1 version of the cb and umi flags
-            df.rename(columns={'r1_CB': 'cb', 'r1_UB': 'umi', 'nimble_features': 'features'}, inplace=True)
         except pd.errors.EmptyDataError:
             write_empty_df(output)
-            return
+            return None
     else:
         write_empty_df(output)
-        return
+        return None
 
     # If the file is not empty but the DataFrame is, write an empty output
     if df.empty:
         write_empty_df(output)
-        return
+        return None
+
+    return df
+
+def convert_df_to_proper_umi(df):
+    # Use the r1 version of the cb and umi flags
+    df.rename(columns={'r1_CB': 'cb', 'r1_UB': 'umi', 'nimble_features': 'features'}, inplace=True)
 
     # Keep only necessary columns
     df_init = df.copy()
@@ -243,6 +247,15 @@ def report(input, output, summarize_columns_list=None, threshold=0.05, disable_t
 
     # Merge duplicate rows after sorting ambiguous features, summing 'nimble_score'
     df = df.groupby(['cb', 'umi', 'features'])['nimble_score'].sum().reset_index()
+    return df, df_init
+
+def report(input, output, summarize_columns_list=None, threshold=0.05, disable_thresholding=False):
+    df = check_df_from_input(input, output)
+    
+    if df is None:
+        return
+
+    df, df_init = convert_df_to_proper_umi(df)
 
     # If the file is not empty but the DataFrame is after filtering, write an empty output
     if df.empty:
@@ -285,6 +298,9 @@ def write_empty_df(output):
     print('No data to parse from input file, writing empty output.')
     empty_df = pd.DataFrame(columns=['feature', 'count', 'cell_barcode'])
     empty_df.to_csv(output, sep='\t', index=False, header=False)
+
+def write_empty_html_report(output):
+    open(output, "w").write("<html><head></head><body><p>Report output skipped due to empty input dataframe.</p></body></html>")
 
 def summarize_fields(df, columns, output_file):
     summary_df = df.groupby('umi')[columns].agg(lambda x: x.value_counts().to_dict())
@@ -414,12 +430,16 @@ if __name__ == "__main__":
     elif args.subcommand == 'report':
         summarize_columns_list = args.summarize.split(',') if args.summarize else None
         report(args.input, args.output, summarize_columns_list, args.threshold, args.disable_thresholding)
-
     elif args.subcommand == 'plot':
         if os.path.getsize(args.input_file) > 0:
             try:
                 print(f"Loading alignment data from {args.input_file}")
                 df = pd.read_csv(args.input_file, sep='\t', quoting=csv.QUOTE_NONE, engine='python')
+                df_umi_filtered, df_init = convert_df_to_proper_umi(df)
+                if df_umi_filtered.empty:
+                    print("Input dataframe is empty after UMI filtration.") 
+                    write_empty_html_report(args.output_file)
+                    sys.exit()
                 generate_plots(df, args.output_file)
             except pd.errors.EmptyDataError:
                 print("Input file is empty.")
