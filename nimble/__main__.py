@@ -231,23 +231,24 @@ def check_df_from_input(input, output):
     return df
 
 def convert_df_to_proper_umi(df):
+    df_copy = df.copy()
     # Use the r1 version of the cb and umi flags
-    df.rename(columns={'r1_CB': 'cb', 'r1_UB': 'umi', 'nimble_features': 'features'}, inplace=True)
+    df_copy.rename(columns={'r1_CB': 'cb', 'r1_UB': 'umi', 'nimble_features': 'features'}, inplace=True)
 
     # Keep only necessary columns
-    df_init = df.copy()
-    df = df[['features', 'umi', 'cb', 'nimble_score']]
+    df_init = df_copy.copy()
+    df_copy = df_copy[['features', 'umi', 'cb', 'nimble_score']]
 
     # Drop rows where 'features', 'umi', 'cb', or 'nimble_score' are null or empty
-    df = df.dropna(subset=['features', 'umi', 'cb', 'nimble_score'])
-    df = df[(df['features'] != '') & (df['umi'] != '') & (df['cb'] != '')]
+    df_copy = df_copy.dropna(subset=['features', 'umi', 'cb', 'nimble_score'])
+    df_copy = df_copy[(df_copy['features'] != '') & (df_copy['umi'] != '') & (df_copy['cb'] != '')]
 
     # Ensure features are sorted
-    df['features'] = df['features'].apply(lambda x: ','.join(sorted(x.split(','))))
+    df_copy['features'] = df_copy['features'].apply(lambda x: ','.join(sorted(x.split(','))))
 
     # Merge duplicate rows after sorting ambiguous features, summing 'nimble_score'
-    df = df.groupby(['cb', 'umi', 'features'])['nimble_score'].sum().reset_index()
-    return df, df_init
+    df_copy = df_copy.groupby(['cb', 'umi', 'features'])['nimble_score'].sum().reset_index()
+    return df_copy, df_init
 
 def report(input, output, summarize_columns_list=None, threshold=0.05, disable_thresholding=False):
     df = check_df_from_input(input, output)
