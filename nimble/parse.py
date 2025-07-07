@@ -125,6 +125,7 @@ def parse_csv(csv_path, has_sequences=True):
                     sequences.append(sequence)
                 else:
                     sequences.append(raw_seq)
+                    nt_lengths.append(str(len(raw_seq)))
 
             if len(metadata) == 0:
                 metadata = [[] for _ in range(0, len(headers))]
