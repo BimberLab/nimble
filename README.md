@@ -6,6 +6,10 @@ nimble is a lightweight tool designed to supplement standard RNA-seq and scRNA-s
 # Documentation
 For installation instructions, [see below](#installation). Detailed documentation, including [usage instructions](https://github.com/BimberLab/nimble/wiki/Quickstart) and [a custom HLA reference vignette](https://github.com/BimberLab/nimble/wiki/HLA-Vignette), can be found at the [wiki](https://github.com/BimberLab/nimble/wiki).
 
+Please cite our manuscript if you use nimble:
+
+[Benjamin S, McElfresh GW, Kaza M, Boggy GJ, Varco-Merth B, Ojha S, Feltham S, Goodwin W, Nkoy C, Duell D, Selseth A, Bennett T, Barber-Axthelm A, Haese NN, Wu H, Waytashek C, Boyle C, Smedley JV, Labriola CS, Axthelm MK, Reeves RK, Streblow DN, Sacha JB, Okoye AA, Hansen SG, Picker LJ, Bimber BN. An immune-focused supplemental alignment pipeline captures information missed from dominant single-cell RNA-seq analyses, including allele-specific MHC-I regulation. Front Immunol. 2025 Aug 8;16:1596760. doi: 10.3389/fimmu.2025.1596760. PMID: 40861433; PMCID: PMC12370678.](https://pubmed.ncbi.nlm.nih.gov/40861433/)
+
 # Support
 Please [open an issue](https://github.com/BimberLab/nimble/issues/new) on this repository for feature requests, support for additional operating systems, bugfixes, or questions.
 
@@ -40,3 +44,4 @@ Once you have nimble installed, proceed to our [usage documentation](https://git
 [Köster, J. (2016). Rust-Bio: a fast and safe bioinformatics library. Bioinformatics, 32(3), 444-446.](http://bioinformatics.oxfordjournals.org/content/early/2015/10/06/bioinformatics.btv573.short?rss=1)
 
 [Cock, P.J. et al. (2009). Biopython: freely available Python tools for computational molecular biology and bioinformatics. Bioinformatics, 25(11), pp.1422–1423.](https://pmc.ncbi.nlm.nih.gov/articles/PMC2682512/)
+
