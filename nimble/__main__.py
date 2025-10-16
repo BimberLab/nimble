@@ -27,6 +27,7 @@ from nimble.parse import parse_fasta, parse_filter_config, parse_csv
 from nimble.usage import print_usage_and_exit
 from nimble.utils import get_exec_name_from_platform, append_path_string, per_umi_thresholding, umi_intersection
 from nimble.report_generation import generate_plots
+from nimble.fastq_barcode_processor import fastq_to_bam_with_barcodes
 
 ALIGN_TRIES = 10
 ALIGN_TRIES_THRESHOLD = 0
@@ -420,6 +421,14 @@ if __name__ == "__main__":
     plot_parser.add_argument('--input_file', help='The nimble counts output file to process.', type=str, required=True)
     plot_parser.add_argument('--output_file', help='Filepath for the HTML report.', type=str, required=True)
 
+    fastq_to_bam_parser = subparsers.add_parser('fastq-to-bam')
+    fastq_to_bam_parser.add_argument('--r1-fastq', help='Path to R1 FASTQ file.', type=str, required=True)
+    fastq_to_bam_parser.add_argument('--r2-fastq', help='Path to R2 FASTQ file.', type=str, required=True)
+    fastq_to_bam_parser.add_argument('--cell-barcodes', help='Path to cell barcode mapping TSV file.', type=str, required=True)
+    fastq_to_bam_parser.add_argument('--umi-mapping', help='Path to UMI mapping TSV file.', type=str, required=True)
+    fastq_to_bam_parser.add_argument('--output', help='Path for output BAM file.', type=str, required=True)
+    fastq_to_bam_parser.add_argument('-c', '--num_cores', help='The number of cores to use for processing.', type=int, default=1)
+
     args = parser.parse_args()
 
     if args.subcommand == 'download':
@@ -431,6 +440,15 @@ if __name__ == "__main__":
     elif args.subcommand == 'report':
         summarize_columns_list = args.summarize.split(',') if args.summarize else None
         report(args.input, args.output, summarize_columns_list, args.threshold, args.disable_thresholding)
+    elif args.subcommand == 'fastq-to-bam':
+        fastq_to_bam_with_barcodes(
+            args.r1_fastq, 
+            args.r2_fastq, 
+            args.cell_barcodes, 
+            args.umi_mapping, 
+            args.output, 
+            args.num_cores
+        )
     elif args.subcommand == 'plot':
         if os.path.getsize(args.input_file) > 0:
             try:
