@@ -424,8 +424,7 @@ if __name__ == "__main__":
     fastq_to_bam_parser = subparsers.add_parser('fastq-to-bam')
     fastq_to_bam_parser.add_argument('--r1-fastq', help='Path to R1 FASTQ file.', type=str, required=True)
     fastq_to_bam_parser.add_argument('--r2-fastq', help='Path to R2 FASTQ file.', type=str, required=True)
-    fastq_to_bam_parser.add_argument('--cell-barcodes', help='Path to cell barcode mapping TSV file.', type=str, required=True)
-    fastq_to_bam_parser.add_argument('--umi-mapping', help='Path to UMI mapping TSV file.', type=str, required=True)
+    fastq_to_bam_parser.add_argument("--map", required=True, help="TSV(.gz) with columns: rawCB, correctedCB, rawUMI, correctedUMI")
     fastq_to_bam_parser.add_argument('--output', help='Path for output BAM file.', type=str, required=True)
     fastq_to_bam_parser.add_argument('-c', '--num_cores', help='The number of cores to use for processing.', type=int, default=1)
 
@@ -444,8 +443,7 @@ if __name__ == "__main__":
         fastq_to_bam_with_barcodes(
             args.r1_fastq, 
             args.r2_fastq, 
-            args.cell_barcodes, 
-            args.umi_mapping, 
+            args.map,
             args.output, 
             args.num_cores
         )
