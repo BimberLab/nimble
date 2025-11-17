@@ -424,9 +424,11 @@ if __name__ == "__main__":
     fastq_to_bam_parser = subparsers.add_parser('fastq-to-bam')
     fastq_to_bam_parser.add_argument('--r1-fastq', help='Path to R1 FASTQ file.', type=str, required=True)
     fastq_to_bam_parser.add_argument('--r2-fastq', help='Path to R2 FASTQ file.', type=str, required=True)
-    fastq_to_bam_parser.add_argument("--map", required=True, help="TSV(.gz) with columns: rawCB, correctedCB, rawUMI, correctedUMI")
+    fastq_to_bam_parser.add_argument("--map", required=True, help="Cell barcode whitelist file (one CB per line, .gz or plain text)")
     fastq_to_bam_parser.add_argument('--output', help='Path for output BAM file.', type=str, required=True)
     fastq_to_bam_parser.add_argument('-c', '--num_cores', help='The number of cores to use for processing.', type=int, default=1)
+    fastq_to_bam_parser.add_argument('--cb-length', help='Length of cell barcode (default: 16).', type=int, default=16)
+    fastq_to_bam_parser.add_argument('--umi-length', help='Length of UMI (default: 12).', type=int, default=12)
 
     args = parser.parse_args()
 
@@ -445,7 +447,9 @@ if __name__ == "__main__":
             args.r2_fastq, 
             args.map,
             args.output, 
-            args.num_cores
+            args.num_cores,
+            args.cb_length,
+            args.umi_length
         )
     elif args.subcommand == 'plot':
         if os.path.getsize(args.input_file) > 0:
