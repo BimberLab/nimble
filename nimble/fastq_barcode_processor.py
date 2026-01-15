@@ -14,6 +14,30 @@ def hamming_distance(s1, s2):
     return sum(c1 != c2 for c1, c2 in zip(s1, s2))
 
 
+def infer_umi_length(r1_iter, search_string = "TTTCTTATATGGG", max_records = 100, min_records = 10, cb_length = 16):
+    tso_starts = []
+    for idx, (r1_record) in enumerate(zip(r1_iter), start=1):
+        pos = r1_record.find(search_string)
+        if (pos > -1):
+            tso_starts.append(pos)
+            if (len(tso_starts) >= min_records):
+                break
+
+        if (idx > max_records):
+            break
+
+    if (len(tso_starts) < min_records):
+        raise ValueError("Unable to infer UMI length. Insufficent R1 sequences contained " + search_string)
+
+    tso_starts = set(tso_starts)
+    if (len(tso_starts) > 1):
+        raise ValueError("Unable to infer UMI length. TSO sequence found at inconsistent positions of R1: " + ",".join(tso_starts))
+
+    umi_length = tso_starts[1] - cb_length
+    print("Inferred UMI length of: " + umi_length)
+
+    return(umi_length)
+
 def build_hamming_index(whitelist):
     """
     Build an index mapping each valid CB to all possible 1-edit variants.
@@ -128,7 +152,7 @@ def correct_cell_barcode(raw_cb, quality_scores, whitelist, hamming_index, corre
     return best_candidate
 
 
-def parse_10x_barcode_from_r1(sequence, cb_length=16, umi_length=12):
+def parse_10x_barcode_from_r1(sequence, cb_length=16, umi_length=10, tso_length=13):
     """
     Parse cell barcode and UMI from 10x R1 read sequence.
     Returns (cell_barcode, umi, remaining_sequence)
@@ -137,11 +161,11 @@ def parse_10x_barcode_from_r1(sequence, cb_length=16, umi_length=12):
         return None, None, ""
     cell_barcode = sequence[:cb_length]
     umi = sequence[cb_length:cb_length + umi_length]
-    remaining_sequence = sequence[cb_length + umi_length:]
+    remaining_sequence = sequence[cb_length + umi_length + tso_length:]
     return cell_barcode, umi, remaining_sequence
 
 
-def process_pair(r1_record, r2_record, whitelist, hamming_index, correction_cache, stats, cb_length=16, umi_length=12):
+def process_pair(r1_record, r2_record, whitelist, hamming_index, correction_cache, stats, cb_length=16, umi_length=10, tso_length = 13):
     """
     Process a single FASTQ pair and return (r1_bam, r2_bam), or None if skipped.
     Correction logic:
@@ -156,7 +180,7 @@ def process_pair(r1_record, r2_record, whitelist, hamming_index, correction_cach
         return None
 
     r1_seq = str(r1_record.seq)
-    raw_cb, umi, remaining_r1_seq = parse_10x_barcode_from_r1(r1_seq, cb_length, umi_length)
+    raw_cb, umi, remaining_r1_seq = parse_10x_barcode_from_r1(r1_seq, cb_length, umi_length, tso_length)
     if raw_cb is None or umi is None:
         stats['too_short'] += 1
         return None
@@ -251,6 +275,8 @@ def fastq_to_bam_with_barcodes(r1_fastq, r2_fastq, cb_whitelist_file, output_bam
             r1_iter = SeqIO.parse(r1_handle, "fastq")
             r2_iter = SeqIO.parse(r2_handle, "fastq")
 
+            umi_length = infer_umi_length(r1_iter)
+
             with ThreadPoolExecutor(max_workers=num_cores) as executor:
                 futures = {}
 
@@ -308,7 +334,12 @@ def fastq_to_bam_with_barcodes(r1_fastq, r2_fastq, cb_whitelist_file, output_bam
         corrected_pct = 100.0 * stats.get('cb_corrected', 0) / total_cb_processed
         dropped_pct = 100.0 * stats.get('cb_no_correction', 0) / total_cb_processed
         print(f"  Correction rate: {perfect_pct:.2f}% perfect, {corrected_pct:.2f}% corrected, {dropped_pct:.2f}% dropped")
-    
+
+        if (dropped_pct == 100.0):
+            raise ValueError("There were no passing cellbarcodes. This likely indicates an error with the inclusionlist")
+    else:
+        raise ValueError("No cellbarcodes were processed. There is likely a problem with the input files")
+
     print(f"\nOther filters:")
     print(f"  Name mismatch: {stats.get('name_mismatch', 0)}")
     print(f"  Too short: {stats.get('too_short', 0)}")
