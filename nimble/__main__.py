@@ -31,6 +31,7 @@ from nimble.fastq_barcode_processor import fastq_to_bam_with_barcodes
 
 ALIGN_TRIES = 10
 ALIGN_TRIES_THRESHOLD = 0
+DOWNLOAD_THRESHOLD = 3
 
 def validate_gzip(file_path):
     try:
@@ -150,7 +151,7 @@ def download(release):
 
 
 # Check if the aligner exists -- if it does, call it with the given parameters.
-def align(reference, output, input, num_cores, strand_filter, trim, tmpdir):
+def align(reference, output, input, num_cores, strand_filter, trim, tmpdir, skip_tso_trimming):
     path = os.path.join(os.path.dirname(os.path.realpath(__file__)), "aligner")
 
     if not os.path.exists(path):
@@ -159,11 +160,11 @@ def align(reference, output, input, num_cores, strand_filter, trim, tmpdir):
 
         global ALIGN_TRIES
         ALIGN_TRIES = ALIGN_TRIES + 1
-        if ALIGN_TRIES >= ALIGN_THRESHOLD:
+        if ALIGN_TRIES >= DOWNLOAD_THRESHOLD:
             print("Error -- could not find or download aligner.")
             sys.exit()
 
-        return align(reference, output, input, num_cores, strand_filter, trim, tmpdir)
+        return align(reference, output, input, num_cores, strand_filter, trim, tmpdir, skip_tso_trimming)
 
     print("Aligning input data to the reference libraries")
     sys.stdout.flush()
@@ -190,6 +191,9 @@ def align(reference, output, input, num_cores, strand_filter, trim, tmpdir):
 
     if trim != "":
         processed_param_list.extend(["-t", trim])
+        
+    if skip_tso_trimming:
+        processed_param_list.extend(["--skip_tso_trimming"])
 
     print(processed_param_list)
     proc = subprocess.Popen([path] + processed_param_list)
@@ -399,6 +403,12 @@ if __name__ == "__main__":
     align_parser.add_argument('--strand_filter', help='Filter reads based on strand information.', type=str, default="unstranded")
     align_parser.add_argument('--trim', help='Configuration for trimming read-data, in the format <TARGET_LENGTH>:<STRICTNESS>, comma-separated, one entry for each passed library', type=str, default="")
     align_parser.add_argument('--tmpdir', help='Path to a temporary directory for sorting .bam files', type=str, default=None)
+    align_parser.add_argument(
+        '--skip_tso_trimming',
+        help='Skip trimming 13bp off the R1 read for the TSO',
+        action='store_true',
+        default=False
+    )
 
     report_parser = subparsers.add_parser('report')
     report_parser.add_argument('-i', '--input', help='The input file.', type=str, required=True)
@@ -476,7 +486,18 @@ if __name__ == "__main__":
     elif args.subcommand == 'generate':
         generate(args.file, args.opt_file, args.output_path)
     elif args.subcommand == 'align':
-        sys.exit(align(args.reference, args.output, args.input, args.num_cores, args.strand_filter, args.trim, args.tmpdir))
+        sys.exit(
+            align(
+                args.reference,
+                args.output,
+                args.input,
+                args.num_cores,
+                args.strand_filter,
+                args.trim,
+                args.tmpdir,
+                args.skip_tso_trimming
+            )
+        )
     elif args.subcommand == 'report':
         summarize_columns_list = args.summarize.split(',') if args.summarize else None
         report(args.input, args.output, summarize_columns_list, args.threshold, args.disable_thresholding)
