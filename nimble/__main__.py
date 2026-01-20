@@ -31,6 +31,7 @@ from nimble.fastq_barcode_processor import fastq_to_bam_with_barcodes
 
 ALIGN_TRIES = 10
 ALIGN_TRIES_THRESHOLD = 0
+DOWNLOAD_THRESHOLD = 3
 
 def validate_gzip(file_path):
     try:
@@ -150,7 +151,7 @@ def download(release):
 
 
 # Check if the aligner exists -- if it does, call it with the given parameters.
-def align(reference, output, input, num_cores, strand_filter, trim, tmpdir):
+def align(reference, output, input, num_cores, strand_filter, trim, tmpdir, skip_tso_trimming):
     path = os.path.join(os.path.dirname(os.path.realpath(__file__)), "aligner")
 
     if not os.path.exists(path):
@@ -159,11 +160,11 @@ def align(reference, output, input, num_cores, strand_filter, trim, tmpdir):
 
         global ALIGN_TRIES
         ALIGN_TRIES = ALIGN_TRIES + 1
-        if ALIGN_TRIES >= ALIGN_THRESHOLD:
+        if ALIGN_TRIES >= DOWNLOAD_THRESHOLD:
             print("Error -- could not find or download aligner.")
             sys.exit()
 
-        return align(reference, output, input, num_cores, strand_filter, trim, tmpdir)
+        return align(reference, output, input, num_cores, strand_filter, trim, tmpdir, skip_tso_trimming)
 
     print("Aligning input data to the reference libraries")
     sys.stdout.flush()
@@ -190,6 +191,9 @@ def align(reference, output, input, num_cores, strand_filter, trim, tmpdir):
 
     if trim != "":
         processed_param_list.extend(["-t", trim])
+        
+    if skip_tso_trimming:
+        processed_param_list.extend(["--skip_tso_trimming"])
 
     print(processed_param_list)
     proc = subprocess.Popen([path] + processed_param_list)
@@ -399,6 +403,12 @@ if __name__ == "__main__":
     align_parser.add_argument('--strand_filter', help='Filter reads based on strand information.', type=str, default="unstranded")
     align_parser.add_argument('--trim', help='Configuration for trimming read-data, in the format <TARGET_LENGTH>:<STRICTNESS>, comma-separated, one entry for each passed library', type=str, default="")
     align_parser.add_argument('--tmpdir', help='Path to a temporary directory for sorting .bam files', type=str, default=None)
+    align_parser.add_argument(
+        '--skip_tso_trimming',
+        help='Skip trimming 13bp off the R1 read for the TSO',
+        action='store_true',
+        default=False
+    )
 
     report_parser = subparsers.add_parser('report')
     report_parser.add_argument('-i', '--input', help='The input file.', type=str, required=True)
@@ -424,11 +434,50 @@ if __name__ == "__main__":
     fastq_to_bam_parser = subparsers.add_parser('fastq-to-bam')
     fastq_to_bam_parser.add_argument('--r1-fastq', help='Path to R1 FASTQ file.', type=str, required=True)
     fastq_to_bam_parser.add_argument('--r2-fastq', help='Path to R2 FASTQ file.', type=str, required=True)
-    fastq_to_bam_parser.add_argument("--map", required=True, help="Cell barcode whitelist file (one CB per line, .gz or plain text)")
+    fastq_to_bam_parser.add_argument(
+        "--map",
+        required=True,
+        help="Cell barcode whitelist file (one CB per line, .gz or plain text)"
+    )
     fastq_to_bam_parser.add_argument('--output', help='Path for output BAM file.', type=str, required=True)
     fastq_to_bam_parser.add_argument('-c', '--num_cores', help='The number of cores to use for processing.', type=int, default=1)
     fastq_to_bam_parser.add_argument('--cb-length', help='Length of cell barcode (default: 16).', type=int, default=16)
-    fastq_to_bam_parser.add_argument('--umi-length', help='Length of UMI (default: 12).', type=int, default=12)
+    fastq_to_bam_parser.add_argument(
+        '--infer-umi',
+        help='Infer UMI length from R1 by locating the TSO motif and strip the motif from R1 (default: on).',
+        action='store_true',
+        default=True
+    )
+    fastq_to_bam_parser.add_argument(
+        '--no-infer-umi',
+        help='Disable UMI inference. Requires --umi-length. Does not strip TSO from R1.',
+        action='store_true',
+        default=False
+    )
+    fastq_to_bam_parser.add_argument(
+        '--umi-length',
+        help='UMI length (required if --no-infer-umi is set). Ignored when inference is enabled.',
+        type=int,
+        default=None
+    )
+    fastq_to_bam_parser.add_argument(
+        '--tso-search-string',
+        help='TSO motif to locate in R1 for UMI inference (default: TTTCTTATATGGG).',
+        type=str,
+        default="TTTCTTATATGGG"
+    )
+    fastq_to_bam_parser.add_argument(
+        '--infer-prefix-pairs',
+        help='Number of read pairs to buffer for UMI inference (default: 2000).',
+        type=int,
+        default=2000
+    )
+    fastq_to_bam_parser.add_argument(
+        '--min-records-with-tso',
+        help='Minimum number of R1 reads containing the TSO motif required to accept inference (default: 10).',
+        type=int,
+        default=10
+    )
 
     args = parser.parse_args()
 
@@ -437,19 +486,40 @@ if __name__ == "__main__":
     elif args.subcommand == 'generate':
         generate(args.file, args.opt_file, args.output_path)
     elif args.subcommand == 'align':
-        sys.exit(align(args.reference, args.output, args.input, args.num_cores, args.strand_filter, args.trim, args.tmpdir))
+        sys.exit(
+            align(
+                args.reference,
+                args.output,
+                args.input,
+                args.num_cores,
+                args.strand_filter,
+                args.trim,
+                args.tmpdir,
+                args.skip_tso_trimming
+            )
+        )
     elif args.subcommand == 'report':
         summarize_columns_list = args.summarize.split(',') if args.summarize else None
         report(args.input, args.output, summarize_columns_list, args.threshold, args.disable_thresholding)
     elif args.subcommand == 'fastq-to-bam':
+        infer_umi = (not args.no_infer_umi) and args.infer_umi
+
+        if not infer_umi and args.umi_length is None:
+            print("Error: --umi-length is required when --no-infer-umi is set.", file=sys.stderr)
+            sys.exit(2)
+
         fastq_to_bam_with_barcodes(
-            args.r1_fastq, 
-            args.r2_fastq, 
-            args.map,
-            args.output, 
-            args.num_cores,
-            args.cb_length,
-            args.umi_length
+            r1_fastq=args.r1_fastq,
+            r2_fastq=args.r2_fastq,
+            cb_whitelist_file=args.map,
+            output_bam=args.output,
+            num_cores=args.num_cores,
+            cb_length=args.cb_length,
+            umi_length=args.umi_length,
+            infer_umi=infer_umi,
+            tso_search_string=args.tso_search_string,
+            infer_prefix_pairs=args.infer_prefix_pairs,
+            min_records_with_tso=args.min_records_with_tso,
         )
     elif args.subcommand == 'plot':
         if os.path.getsize(args.input_file) > 0:
