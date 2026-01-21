@@ -468,9 +468,9 @@ if __name__ == "__main__":
     )
     fastq_to_bam_parser.add_argument(
         '--infer-prefix-pairs',
-        help='Number of read pairs to buffer for UMI inference (default: 2000).',
+        help='Number of read pairs to buffer for UMI inference (default: 200).',
         type=int,
-        default=2000
+        default=200
     )
     fastq_to_bam_parser.add_argument(
         '--min-records-with-tso',

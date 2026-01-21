@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 import gzip
 import sys
-from collections import defaultdict
+from collections import defaultdict, Counter
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from itertools import islice, chain
 import pysam
@@ -103,7 +103,6 @@ def correct_cell_barcode(raw_cb, quality_scores, whitelist, hamming_index, corre
     correction_cache[raw_cb] = best_candidate
     return best_candidate
 
-
 def infer_umi_and_tso_lengths_from_r1_records(
     r1_records,
     search_string="TTTCTTATATGGG",
@@ -113,42 +112,53 @@ def infer_umi_and_tso_lengths_from_r1_records(
     """
     Infer UMI length by locating the TSO motif in R1 reads.
     Assumes structure: [CB][UMI][TSO...][cDNA...]
-    umi_length = tso_start - cb_length
-    tso_length = len(search_string) (the removed prefix length)
+
+    Resolution strategy:
+      - Ignore reads with no TSO hit (pos == -1).
+      - Allow multiple observed TSO positions; pick the *mode* (majority) position.
+      - If fewer than min_records hits are available (e.g. EOF), use as many as we have.
     """
+
     tso_starts = []
     for rec in r1_records:
         seq = str(rec.seq)
         pos = seq.find(search_string)
-        if pos != -1:
-            tso_starts.append(pos)
-            if len(tso_starts) >= min_records:
-                break
+        if pos == -1:
+            continue  # skip non-hits for inference
+        tso_starts.append(pos)
 
-    if len(tso_starts) < min_records:
+    if len(tso_starts) == 0:
         raise ValueError(
-            f"Unable to infer UMI length: fewer than {min_records} reads contained TSO motif {search_string}"
+            f"Unable to infer UMI length: no reads contained TSO motif {search_string}"
         )
 
-    unique = set(tso_starts)
-    if len(unique) != 1:
-        raise ValueError(
-            f"Unable to infer UMI length: TSO motif found at inconsistent positions in R1: {sorted(unique)}"
+    counts = Counter(tso_starts)
+    # Choose the most common; break ties by choosing the smallest position
+    mode_pos, mode_count = min(
+        (pos, cnt) for pos, cnt in counts.items() if cnt == max(counts.values())
+    )
+    total_hits = len(tso_starts)
+    top = counts.most_common(10)
+    top_str = ", ".join([f"{p}:{c}" for p, c in top])
+    print(f"TSO hit count used for inference: {total_hits}")
+    print(f"TSO positions (top): {top_str}")
+    if total_hits < min_records:
+        print(
+            f"WARNING: only {total_hits} reads contained the TSO motif; "
+            f"min_records={min_records}. Proceeding with majority position."
         )
 
-    tso_start = next(iter(unique))
-    umi_length = tso_start - cb_length
+    umi_length = mode_pos - cb_length
     if umi_length <= 0:
         raise ValueError(
-            f"Inferred UMI length <= 0 (tso_start={tso_start}, cb_length={cb_length}). Check motif/structure."
+            f"Inferred UMI length <= 0 (mode_tso_start={mode_pos}, cb_length={cb_length}). "
+            f"Check motif/structure."
         )
 
     tso_length = len(search_string)
-
-    print(f"Inferred UMI length: {umi_length}")
+    print(f"Inferred UMI length: {umi_length} (from majority TSO start {mode_pos})")
     print(f"Using TSO length: {tso_length} (len of search_string)")
     return umi_length, tso_length
-
 
 def parse_10x_barcode_from_r1(sequence, cb_length=16, umi_length=12, tso_length=0):
     """
@@ -216,7 +226,6 @@ def process_pair(
     r1_bam = pysam.AlignedSegment()
     r1_bam.query_name = r1_name
     r1_bam.query_sequence = remaining_r1_seq
-    # IMPORTANT: drop the same prefix from qualities as from sequence
     r1_bam.query_qualities = r1_record.letter_annotations["phred_quality"][prefix_len:]
     r1_bam.flag = 77  # paired, first in pair, unmapped, mate unmapped
     r1_bam.reference_id = -1
@@ -249,18 +258,20 @@ def fastq_to_bam_with_barcodes(
     umi_length=None,
     infer_umi=True,
     tso_search_string="TTTCTTATATGGG",
-    infer_prefix_pairs=2000,
+    infer_prefix_pairs=200,
     min_records_with_tso=10,
 ):
     """
     Convert paired FASTQ files to unaligned BAM with CB/UB tags using multiple threads.
     - Corrects CB using whitelist-based Hamming distance 0/1 correction with CB qualities.
     - Optionally infers UMI length by locating a TSO motif in R1 and removes the TSO from R1.
-      (If infer_umi=False, uses umi_length as provided and does not remove TSO unless you set tso_search_string
-       to match and set infer_umi=True.)
-
+    
     Args:
         r1_fastq, r2_fastq: FASTQ(.gz) paths
+        cb_whitelist_file: whitelist file
+        output_bam: output BAM path
+        num_cores: threads
+        cb_length: cell barcode length
         cb_whitelist_file: whitelist file
         output_bam: output BAM path
         num_cores: threads
@@ -304,15 +315,39 @@ def fastq_to_bam_with_barcodes(
             r1_iter = SeqIO.parse(r1_handle, "fastq")
             r2_iter = SeqIO.parse(r2_handle, "fastq")
 
-            # Buffer a small matched prefix for inference so we don't desync iterators.
-            prefix_pairs = list(islice(zip(r1_iter, r2_iter), infer_prefix_pairs))
+            prefix_pairs = []
+            tso_hit_r1 = []
+
+            target_hits = infer_prefix_pairs if infer_umi else 0
+
+            while True:
+                try:
+                    r1_record = next(r1_iter)
+                    r2_record = next(r2_iter)
+                except StopIteration:
+                    break
+
+                prefix_pairs.append((r1_record, r2_record))
+
+                if infer_umi:
+                    pos = str(r1_record.seq).find(tso_search_string)
+                    if pos != -1:
+                        tso_hit_r1.append(r1_record)
+
+                    # Stop once we have enough usable reads for inference
+                    if len(tso_hit_r1) >= target_hits:
+                        break
+
+                # If not inferring, we only need a minimal buffer to avoid empty input
+                if not infer_umi and len(prefix_pairs) >= 1:
+                    break
+
             if not prefix_pairs:
                 raise ValueError("Input FASTQs are empty or could not be read")
 
             if infer_umi:
-                prefix_r1 = [p[0] for p in prefix_pairs]
                 inferred_umi_length, tso_length = infer_umi_and_tso_lengths_from_r1_records(
-                    prefix_r1,
+                    tso_hit_r1,
                     search_string=tso_search_string,
                     cb_length=cb_length,
                     min_records=min_records_with_tso,
@@ -324,7 +359,6 @@ def fastq_to_bam_with_barcodes(
                 umi_length_use = int(umi_length)
                 tso_length = 0
 
-            # Reconstruct full streams
             r1_full = chain((p[0] for p in prefix_pairs), r1_iter)
             r2_full = chain((p[1] for p in prefix_pairs), r2_iter)
 
@@ -347,7 +381,6 @@ def fastq_to_bam_with_barcodes(
                     )
                     futures[fut] = True
 
-                    # Throttle in-flight futures to limit memory use
                     if len(futures) >= num_cores * 100:
                         done_any = 0
                         for done in as_completed(list(futures)[: num_cores * 10]):
@@ -365,7 +398,6 @@ def fastq_to_bam_with_barcodes(
                     if stats["total_pairs"] % 1_000_000 == 0:
                         print(f"Processed {stats['total_pairs']} read pairs...")
 
-                # Drain remaining futures
                 for done in as_completed(list(futures.keys())):
                     res = done.result()
                     if res:
